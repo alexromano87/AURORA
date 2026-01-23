@@ -1,0 +1,66 @@
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@8.15.0
+
+# Copy root package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+
+# Copy all workspace package.json files
+COPY apps/api/package.json ./apps/api/
+COPY packages/db/package.json ./packages/db/
+COPY packages/types/package.json ./packages/types/
+COPY packages/contracts/package.json ./packages/contracts/
+
+# Install all dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy all source code
+COPY apps/api ./apps/api
+COPY packages ./packages
+
+# Generate Prisma client and build
+WORKDIR /app
+RUN pnpm --filter @aurora/db db:generate
+RUN pnpm --filter @aurora/api build
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@8.15.0
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/db/package.json ./packages/db/
+COPY packages/types/package.json ./packages/types/
+COPY packages/contracts/package.json ./packages/contracts/
+
+# Install all dependencies (needed for monorepo)
+RUN pnpm install --frozen-lockfile
+
+# Copy Prisma schema
+COPY packages/db/prisma ./packages/db/prisma
+
+# Generate Prisma client
+RUN pnpm --filter @aurora/db db:generate
+
+# Copy built application and its dependencies
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/packages ./packages
+
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=3005
+
+WORKDIR /app/apps/api
+
+EXPOSE 3005
+
+CMD ["node", "dist/main.js"]

@@ -1,0 +1,301 @@
+// AURORA Database Schema
+// PostgreSQL + TimescaleDB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== IPS & Policy ====================
+
+model IpsPolicy {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions IpsPolicyVersion[]
+
+  @@map("ips_policy")
+}
+
+model IpsPolicyVersion {
+  id          String    @id @default(uuid())
+  policyId    String
+  version     String // Semantic version: 1.0.0
+  config      Json // IPS JSON structure
+  isActive    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  activatedAt DateTime?
+
+  policy IpsPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, version])
+  @@index([policyId, isActive])
+  @@map("ips_policy_version")
+}
+
+// ==================== Instruments ====================
+
+model Instrument {
+  id       String  @id @default(uuid())
+  isin     String  @unique
+  name     String
+  ticker   String?
+  currency String  @default("EUR")
+  type     String // "ETF", "STOCK", "BOND"
+  category String? // "equity_global", "bond_government", etc.
+  domicile String? // "IE", "LU", etc.
+  provider String? // "iShares", "Vanguard", etc.
+  isUcits  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  etfMetrics     EtfMetrics?
+  isinMapping    IsinMapping?
+  transactions   Transaction[]
+  positions      Position[]
+  priceHistory   PriceHistory[]
+  scoringResults EtfScoringResult[]
+
+  @@index([isin])
+  @@index([type, category])
+  @@map("instrument")
+}
+
+model IsinMapping {
+  isin           String    @id
+  yahooTicker    String?
+  exchange       String?
+  verified       Boolean   @default(false)
+  lastVerifiedAt DateTime?
+
+  instrument Instrument @relation(fields: [isin], references: [isin], onDelete: Cascade)
+
+  @@map("isin_mapping")
+}
+
+model EtfMetrics {
+  id           String @id @default(uuid())
+  instrumentId String @unique
+
+  ter                Float?    // Total Expense Ratio (%)
+  aum                Float?    // Assets Under Management (EUR)
+  inceptionDate      DateTime?
+  replicationMethod  String? // "Physical", "Synthetic"
+  distributionPolicy String? // "Accumulating", "Distributing"
+
+  trackingDifference Float? // vs benchmark (%)
+  trackingError      Float? // volatility of TD
+
+  avgDailyVolume Float? // Last 3 months
+  avgSpread      Float? // Bid-ask spread (%)
+
+  dataCompleteness Float?   // 0.0 - 1.0
+  lastUpdated      DateTime @default(now())
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@index([instrumentId])
+  @@map("etf_metrics")
+}
+
+model PriceHistory {
+  id           String   @id @default(uuid())
+  instrumentId String
+  date         DateTime @db.Date
+  close        Float
+  open         Float?
+  high         Float?
+  low          Float?
+  volume       Float?
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, date])
+  @@index([instrumentId, date])
+  @@map("price_history")
+}
+
+// ==================== Portfolio & Transactions ====================
+
+model Portfolio {
+  id     String @id @default(uuid())
+  name   String
+  type   String @default("paper") // "paper" | "real"
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+  positions    Position[]
+  snapshots    PositionSnapshot[]
+  proposals    Proposal[]
+  alerts       Alert[]
+
+  @@index([userId, type])
+  @@map("portfolio")
+}
+
+model Transaction {
+  id           String @id @default(uuid())
+  portfolioId  String
+  instrumentId String
+
+  side      String // "BUY" | "SELL"
+  quantity  Float
+  priceEur  Float
+  feeEur    Float  @default(0)
+  totalEur  Float // quantity * price + fee
+
+  executedAt DateTime @default(now())
+  note       String?
+
+  portfolio  Portfolio  @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@index([portfolioId, executedAt])
+  @@index([instrumentId])
+  @@map("transaction")
+}
+
+model Position {
+  id           String @id @default(uuid())
+  portfolioId  String
+  instrumentId String
+
+  quantity   Float
+  avgCostEur Float // Average purchase price
+
+  updatedAt DateTime @updatedAt
+
+  portfolio  Portfolio  @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([portfolioId, instrumentId])
+  @@index([portfolioId])
+  @@map("position")
+}
+
+model PositionSnapshot {
+  id            String   @id @default(uuid())
+  portfolioId   String
+  snapshotDate  DateTime @db.Date
+  totalValueEur Float
+
+  items Json // Array of {instrument_id, qty, price, value, weight, drift}
+
+  createdAt DateTime @default(now())
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, snapshotDate])
+  @@index([portfolioId, snapshotDate])
+  @@map("position_snapshot")
+}
+
+// ==================== Proposals & Engine Runs ====================
+
+model Proposal {
+  id          String     @id @default(uuid())
+  runId       String     @unique
+  run         EngineRun  @relation(fields: [runId], references: [runId])
+  portfolioId String
+
+  type      String   // "ETF_SCORING" | "PORTFOLIO_PROPOSAL" | "MONTHLY_PAC"
+  dataAsof  DateTime @db.Date
+
+  tradeList Json // Array of {instrument_id, side, amount_eur}
+  rationale Json // {targets, drift_snapshot, constraints_passed, ...}
+
+  inputHash  String?
+  outputHash String?
+
+  status String @default("pending") // "pending" | "executed" | "rejected"
+
+  createdAt  DateTime  @default(now())
+  executedAt DateTime?
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, dataAsof])
+  @@index([runId])
+  @@map("proposal")
+}
+
+model EngineRun {
+  id     String @id @default(uuid())
+  runId  String @unique
+  userId String
+
+  type   String @default("queued") // "queued" | "running" | "completed" | "failed"
+  status String // "ETF_SCORING" | "MONTHLY_PAC" | etc.
+
+  inputParams Json
+  result      Json?
+  error       String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int?
+
+  createdAt DateTime @default(now())
+
+  scoringResults EtfScoringResult[]
+  pacProposals   Proposal[]
+
+  @@index([runId])
+  @@index([userId, type, status])
+  @@map("engine_run")
+}
+
+// ==================== Alerts ====================
+
+model Alert {
+  id          String     @id @default(uuid())
+  portfolioId String?
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id])
+
+  priority String // "high" | "medium" | "low"
+  type     String // "drift_breach" | "concentration" | etc.
+  title    String
+  message  String
+  data     Json?
+
+  acknowledged   Boolean   @default(false)
+  acknowledgedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([portfolioId, acknowledged])
+  @@index([priority, acknowledged])
+  @@map("alert")
+}
+
+// ==================== ETF Scoring Results ====================
+
+model EtfScoringResult {
+  id           String     @id @default(uuid())
+  runId        String
+  run          EngineRun  @relation(fields: [runId], references: [runId])
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  bucket       String     // "equity_global", etc.
+
+  score     Float
+  breakdown Json // {costs: X, tracking: Y, ...}
+  redFlags  Json // Array of strings
+
+  dataAsof  DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+  @@index([bucket, score])
+  @@map("etf_scoring_result")
+}

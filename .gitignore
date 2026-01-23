@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Environment files
+.env*.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# Database
+*.db
+*.sqlite
+/data/
+
+# Docker
+/volumes/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Testing
+coverage/
+.pytest_cache/
+
+# Turbo
+.turbo/
+
+# Temporary files
+*.tmp
+*.temp
+AURORA_Project_Codex_v2.html
+generate_pdf.py

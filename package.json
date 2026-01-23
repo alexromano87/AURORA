@@ -1,0 +1,35 @@
+{
+  "name": "aurora-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AURORA - Personal Investment Intelligence System",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "db:migrate": "cd packages/db && npx prisma migrate dev",
+    "db:studio": "cd packages/db && npx prisma studio",
+    "db:seed": "cd packages/db && npx prisma db seed"
+  },
+  "devDependencies": {
+    "@turbo/gen": "^2.0.0",
+    "turbo": "^2.0.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

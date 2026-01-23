@@ -1,0 +1,107 @@
+version: '3.9'
+
+services:
+  # PostgreSQL + TimescaleDB
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: aurora-db
+    environment:
+      POSTGRES_USER: aurora
+      POSTGRES_PASSWORD: aurora_dev_password
+      POSTGRES_DB: aurora_dev
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurora -d aurora_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aurora-net
+
+  # Redis (Queue & Cache)
+  redis:
+    image: redis:7-alpine
+    container_name: aurora-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aurora-net
+
+  # API (NestJS) - Development
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: aurora-api
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://aurora:aurora_dev_password@db:5432/aurora_dev?schema=aurora
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3005
+    ports:
+      - "3005:3005"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aurora-net
+
+  # Engine (Python Worker)
+  engine:
+    build:
+      context: ..
+      dockerfile: apps/engine/Dockerfile
+    container_name: aurora-engine
+    environment:
+      DATABASE_URL: postgresql://aurora:aurora_dev_password@db:5432/aurora_dev
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "8002:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aurora-net
+
+  # UI (React + Vite)
+  ui:
+    build:
+      context: ..
+      dockerfile: apps/ui/Dockerfile
+    container_name: aurora-ui
+    ports:
+      - "5174:80"
+    depends_on:
+      - api
+    networks:
+      - aurora-net
+
+volumes:
+  db-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  aurora-net:
+    driver: bridge
