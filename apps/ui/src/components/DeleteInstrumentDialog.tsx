@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tantml:react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog } from './Dialog';
 import { AlertTriangle } from 'lucide-react';
 
