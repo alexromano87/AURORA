@@ -67,12 +67,15 @@ export class InstrumentsService {
     isin?: string;
     currency?: string;
   }) {
+    // For CRYPTO, ISIN is not applicable, always use empty string
+    const isin = data.type === 'CRYPTO' ? '' : (data.isin || '');
+
     return prisma.instrument.create({
       data: {
         ticker: data.ticker,
         name: data.name,
         type: data.type,
-        isin: data.isin || '',
+        isin,
         currency: data.currency || 'EUR',
       } as any,
     });
@@ -118,13 +121,16 @@ export class InstrumentsService {
       currency?: string;
     },
   ) {
+    // For CRYPTO, ISIN is not applicable, always use empty string
+    const isin = data.type === 'CRYPTO' ? '' : (data.isin || '');
+
     return prisma.instrument.update({
       where: { id: instrumentId },
       data: {
         ticker: data.ticker,
         name: data.name,
         type: data.type,
-        isin: data.isin || '',
+        isin,
         currency: data.currency || 'EUR',
       } as any,
     });

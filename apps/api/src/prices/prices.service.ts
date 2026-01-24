@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaClient } from '@aurora/db';
+import * as fetch from 'node-fetch';
 
 const prisma = new PrismaClient();
 
@@ -16,18 +17,129 @@ interface PriceData {
 export class PricesService {
   private readonly logger = new Logger(PricesService.name);
   private yahooFinance: any;
+  private initPromise: Promise<void>;
+  private lastRequestTime = 0;
+  private readonly MIN_REQUEST_INTERVAL = 10000; // 10 secondi tra le richieste (test)
 
   constructor() {
-    // Dynamic import for ESM module
-    this.initYahooFinance();
+    // Dynamic import for ESM module - store the promise
+    this.initPromise = this.initYahooFinance();
   }
 
   private async initYahooFinance() {
+    // Non serve più inizializzazione, usiamo fetch diretto
+    this.yahooFinance = true;
+    this.logger.log('Yahoo Finance HTTP client ready');
+  }
+
+  private async ensureInitialized() {
+    await this.initPromise;
+  }
+
+  /**
+   * Rate limiting: aspetta prima di fare una nuova richiesta
+   */
+  private async waitForRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+
+    if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
+      const waitTime = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+      this.logger.log(`Rate limiting: waiting ${waitTime}ms before next request`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+
+    this.lastRequestTime = Date.now();
+  }
+
+  /**
+   * Scarica dati storici direttamente dall'API Yahoo Finance via HTTP
+   */
+  private async fetchYahooHistorical(symbol: string, startDate: Date, endDate: Date, retries = 3): Promise<any[]> {
+    // Rate limiting
+    await this.waitForRateLimit();
+
     try {
-      const module = await import('yahoo-finance2');
-      this.yahooFinance = module.default;
+      const period1 = Math.floor(startDate.getTime() / 1000);
+      const period2 = Math.floor(endDate.getTime() / 1000);
+
+      // Usa l'endpoint chart JSON che è più affidabile e non richiede cookies
+      const url = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=1d`;
+
+      this.logger.log(`Fetching from: ${url}`);
+
+      const response = await fetch.default(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Connection': 'keep-alive',
+        },
+      });
+
+      // Se ricevi 429 (Too Many Requests), fai retry con backoff esponenziale
+      if (response.status === 429 && retries > 0) {
+        const backoffTime = (4 - retries) * 5000; // 5s, 10s, 15s
+        this.logger.warn(`Rate limited (429), retrying in ${backoffTime}ms (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        return this.fetchYahooHistorical(symbol, startDate, endDate, retries - 1);
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return this.parseYahooJSON(data);
     } catch (error) {
-      this.logger.error('Failed to load yahoo-finance2:', error);
+      this.logger.error('Error fetching from Yahoo Finance:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse JSON response from Yahoo Finance Chart API
+   */
+  private parseYahooJSON(data: any): any[] {
+    try {
+      const result = data?.chart?.result?.[0];
+      if (!result) {
+        this.logger.warn('No result in Yahoo Finance response');
+        return [];
+      }
+
+      const timestamps = result.timestamp || [];
+      const quotes = result.indicators?.quote?.[0];
+
+      if (!quotes || !timestamps.length) {
+        this.logger.warn('No quotes or timestamps in response');
+        return [];
+      }
+
+      const { open, high, low, close, volume } = quotes;
+
+      return timestamps
+        .map((timestamp: number, index: number) => {
+          const closePrice = close[index];
+
+          // Skip null/invalid data points
+          if (closePrice === null || closePrice === undefined || isNaN(closePrice)) {
+            return null;
+          }
+
+          return {
+            date: new Date(timestamp * 1000),
+            open: open[index] || closePrice,
+            high: high[index] || closePrice,
+            low: low[index] || closePrice,
+            close: closePrice,
+            volume: volume[index] || 0,
+          };
+        })
+        .filter(row => row !== null);
+    } catch (error) {
+      this.logger.error('Error parsing Yahoo Finance JSON:', error.message);
+      return [];
     }
   }
 
@@ -40,15 +152,7 @@ export class PricesService {
   ): Promise<{ success: boolean; count: number; error?: string }> {
     try {
       // Ensure yahooFinance is loaded
-      if (!this.yahooFinance) {
-        await this.initYahooFinance();
-        // Wait a bit for initialization
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      if (!this.yahooFinance) {
-        return { success: false, count: 0, error: 'Yahoo Finance module not loaded' };
-      }
+      await this.ensureInitialized();
 
       const instrument = await prisma.instrument.findUnique({
         where: { id: instrumentId },
@@ -62,31 +166,34 @@ export class PricesService {
       // Determina il ticker Yahoo Finance
       let yahooTicker = instrument.isinMapping?.yahooTicker;
 
-      // Se non c'è mapping, prova a costruirlo dal ticker
+      // Se non c'è mapping, prova a usare l'ISIN direttamente
       if (!yahooTicker) {
-        yahooTicker = this.guessYahooTicker(instrument.ticker, instrument.type);
+        // Per ETF, STOCK e BOND, Yahoo Finance supporta la ricerca diretta tramite ISIN
+        if (instrument.isin && (instrument.type === 'ETF' || instrument.type === 'STOCK' || instrument.type === 'BOND')) {
+          yahooTicker = instrument.isin;
+          this.logger.log(`Using ISIN as ticker: ${yahooTicker}`);
+        } else {
+          // Fallback: prova a costruirlo dal ticker
+          yahooTicker = this.guessYahooTicker(instrument.ticker, instrument.type);
+        }
       }
 
       if (!yahooTicker) {
         return {
           success: false,
           count: 0,
-          error: 'No Yahoo Finance ticker available'
+          error: 'No Yahoo Finance ticker or ISIN available'
         };
       }
 
-      this.logger.log(`Fetching prices for ${instrument.ticker} (${yahooTicker})...`);
+      this.logger.log(`Fetching prices for ${instrument.ticker} using identifier: ${yahooTicker}`);
 
-      // Scarica i prezzi storici
+      // Scarica i prezzi storici via HTTP
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const result = await this.yahooFinance.historical(yahooTicker, {
-        period1: startDate,
-        period2: endDate,
-        interval: '1d',
-      }) as any[];
+      const result = await this.fetchYahooHistorical(yahooTicker, startDate, endDate);
 
       if (!result || result.length === 0) {
         return {
@@ -96,15 +203,8 @@ export class PricesService {
         };
       }
 
-      // Converti i dati in formato PriceHistory
-      const priceData: PriceData[] = result.map((quote: any) => ({
-        date: quote.date,
-        open: quote.open || quote.close,
-        high: quote.high || quote.close,
-        low: quote.low || quote.close,
-        close: quote.close,
-        volume: quote.volume || 0,
-      }));
+      // I dati sono già nel formato corretto dal parseYahooCSV
+      const priceData: PriceData[] = result;
 
       // Salva i prezzi nel database
       const operations = priceData.map((price) =>
@@ -171,8 +271,9 @@ export class PricesService {
         );
       }
 
-      // Pausa di 1 secondo tra le richieste per evitare rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Pausa di 3 secondi tra le richieste per evitare rate limiting
+      // (il rate limiting interno già aspetta 2s, ma aggiungiamo margine)
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
     this.logger.log(
@@ -189,49 +290,66 @@ export class PricesService {
   /**
    * Ottiene l'ultimo prezzo disponibile per uno strumento
    */
-  async getLatestPrice(instrumentId: string): Promise<number | null> {
+  async getLatestPrice(instrumentId: string): Promise<{
+    priceEur: number;
+    priceOriginal: number | null;
+    currency: string;
+  } | null> {
     const latestPrice = await prisma.priceHistory.findFirst({
       where: { instrumentId },
       orderBy: { date: 'desc' },
-      select: { close: true },
+      select: {
+        close: true,
+        originalClose: true,
+        originalCurrency: true,
+        instrument: {
+          select: {
+            currency: true,
+          },
+        },
+      },
     });
 
-    return latestPrice?.close || null;
+    if (!latestPrice) {
+      return null;
+    }
+
+    return {
+      priceEur: latestPrice.close,
+      priceOriginal: latestPrice.originalClose,
+      currency: latestPrice.originalCurrency || 'EUR',
+    };
   }
 
   /**
    * Cerca di indovinare il ticker Yahoo Finance dal ticker dello strumento
+   * Nota: per ETF, STOCK e BOND è meglio usare l'ISIN direttamente
    */
   private guessYahooTicker(ticker: string, type: string): string | null {
     if (!ticker) return null;
 
-    // Per ETF europei su Borsa Italiana
-    if (type === 'ETF') {
-      return `${ticker}.MI`; // Milano
-    }
-
-    // Per crypto
+    // Per crypto, usa il formato ticker-USD
     if (type === 'CRYPTO') {
-      return `${ticker}-USD`; // Es. BTC-USD
+      return `${ticker}-USD`; // Es. BTC-USD, ETH-USD
     }
 
-    // Per stock, proviamo varie borse
-    // Questo è un approccio semplificato, idealmente dovremmo avere il mapping nel DB
-    return ticker; // Prova il ticker così com'è
+    // Per altri tipi, ritorna il ticker così com'è come fallback
+    // Ma nota: per ETF/STOCK/BOND europei l'ISIN funziona meglio
+    return ticker;
   }
 
   /**
-   * Crea o aggiorna il mapping ISIN -> Yahoo Ticker
+   * Crea o aggiorna il mapping Instrument -> Yahoo Ticker
    */
   async upsertIsinMapping(
-    isin: string,
+    instrumentId: string,
     yahooTicker: string,
     exchange?: string,
   ): Promise<void> {
     await prisma.isinMapping.upsert({
-      where: { isin },
+      where: { instrumentId },
       create: {
-        isin,
+        instrumentId,
         yahooTicker,
         exchange,
       },

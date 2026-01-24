@@ -7,6 +7,7 @@ import { PortfolioDetailPage } from './pages/PortfolioDetail';
 import { TransactionsPage } from './pages/Transactions';
 import { AlertsPage } from './pages/Alerts';
 import { InstrumentsPage } from './pages/Instruments';
+import { InstrumentDetailPage } from './pages/InstrumentDetail';
 import { EnginePage } from './pages/Engine';
 import { PricesPage } from './pages/Prices';
 
@@ -21,6 +22,7 @@ function App() {
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/instruments" element={<InstrumentsPage />} />
+        <Route path="/instruments/:id" element={<InstrumentDetailPage />} />
         <Route path="/engine" element={<EnginePage />} />
         <Route path="/prices" element={<PricesPage />} />
       </Routes>

@@ -43,11 +43,11 @@ model IpsPolicyVersion {
 
 model Instrument {
   id       String  @id @default(uuid())
-  isin     String  @unique
+  isin     String // Removed @unique to allow multiple empty ISINs for crypto
   name     String
   ticker   String?
   currency String  @default("EUR")
-  type     String // "ETF", "STOCK", "BOND"
+  type     String // "ETF", "STOCK", "BOND", "CRYPTO", "CASH"
   category String? // "equity_global", "bond_government", etc.
   domicile String? // "IE", "LU", etc.
   provider String? // "iShares", "Vanguard", etc.
@@ -69,13 +69,14 @@ model Instrument {
 }
 
 model IsinMapping {
-  isin           String    @id
+  id             String    @id @default(uuid())
+  instrumentId   String    @unique @map("instrument_id")
   yahooTicker    String?
   exchange       String?
   verified       Boolean   @default(false)
   lastVerifiedAt DateTime?
 
-  instrument Instrument @relation(fields: [isin], references: [isin], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 
   @@map("isin_mapping")
 }
@@ -109,11 +110,18 @@ model PriceHistory {
   id           String   @id @default(uuid())
   instrumentId String
   date         DateTime @db.Date
-  close        Float
+  close        Float    // Prezzo in EUR (convertito se necessario)
   open         Float?
   high         Float?
   low          Float?
   volume       Float?
+
+  // Prezzi originali nella valuta di origine (prima della conversione)
+  originalClose    Float?  // Prezzo originale (null se già in EUR)
+  originalOpen     Float?
+  originalHigh     Float?
+  originalLow      Float?
+  originalCurrency String? // Valuta originale (null se EUR)
 
   instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 

@@ -92,6 +92,23 @@ export const api = {
       fetchApi(`/prices/instrument/${instrumentId}?${days ? `days=${days}` : ''}`, {
         method: 'POST',
       }),
+    fetchFromFinnhub: (instrumentId: string) =>
+      fetchApi(`/prices/finnhub/instrument/${instrumentId}`, {
+        method: 'POST',
+      }),
+    fetchFromYahoo: (instrumentId: string) =>
+      fetchApi(`/prices/yahoo/instrument/${instrumentId}`, {
+        method: 'POST',
+      }),
+    searchYahooSymbols: (query: string) =>
+      fetchApi<Array<{
+        symbol: string;
+        name: string;
+        exchange: string;
+        price?: number;
+        currency?: string;
+        isin?: string;
+      }>>(`/prices/yahoo/search/${encodeURIComponent(query)}`),
     updateAll: (days?: number) =>
       fetchApi(`/prices/update-all?${days ? `days=${days}` : ''}`, {
         method: 'POST',
@@ -105,7 +122,7 @@ export const api = {
         method: 'POST',
       }),
     getLatestPrice: (instrumentId: string) =>
-      fetchApi(`/prices/instrument/${instrumentId}/latest`),
+      fetchApi<{ priceEur: number; priceOriginal: number | null; currency: string } | null>(`/prices/instrument/${instrumentId}/latest`),
     getJobsStatus: () => fetchApi('/prices/jobs/status'),
   },
 };

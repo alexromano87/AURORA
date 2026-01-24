@@ -52,6 +52,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PORT: 3005
+      FINNHUB_API_KEY: d5d86b9r01qur4iqj1r0d5d86b9r01qur4iqj1rg
     ports:
       - "3005:3005"
     depends_on:
