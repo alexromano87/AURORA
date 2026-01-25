@@ -322,6 +322,54 @@ export class PricesService {
   }
 
   /**
+   * Recupera lo storico prezzi per uno strumento
+   */
+  async getPriceHistory(instrumentId: string, days: number = 365): Promise<Array<{
+    date: string;
+    price: number;
+    priceOriginal: number | null;
+    currency: string;
+    open: number | null;
+    high: number | null;
+    low: number | null;
+    volume: number | null;
+  }>> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const history = await prisma.priceHistory.findMany({
+      where: {
+        instrumentId,
+        date: {
+          gte: startDate,
+        },
+      },
+      orderBy: { date: 'asc' },
+      select: {
+        date: true,
+        close: true,
+        originalClose: true,
+        originalCurrency: true,
+        open: true,
+        high: true,
+        low: true,
+        volume: true,
+      },
+    });
+
+    return history.map(record => ({
+      date: record.date.toISOString().split('T')[0],
+      price: record.close,
+      priceOriginal: record.originalClose,
+      currency: record.originalCurrency || 'EUR',
+      open: record.open,
+      high: record.high,
+      low: record.low,
+      volume: record.volume,
+    }));
+  }
+
+  /**
    * Cerca di indovinare il ticker Yahoo Finance dal ticker dello strumento
    * Nota: per ETF, STOCK e BOND è meglio usare l'ISIN direttamente
    */

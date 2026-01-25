@@ -1,18 +1,43 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { Briefcase, TrendingUp, TrendingDown } from 'lucide-react';
+import { Briefcase, TrendingUp, TrendingDown, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { CreatePortfolioDialog } from '@/components/CreatePortfolioDialog';
+import { EditPortfolioDialog } from '@/components/EditPortfolioDialog';
 
 export function PortfoliosPage() {
   const userId = 'user_default';
+  const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingPortfolio, setEditingPortfolio] = useState<any>(null);
 
   const { data: portfolios, isLoading } = useQuery({
     queryKey: ['portfolios', userId],
     queryFn: () => api.portfolios.list(userId),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.portfolios.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolios'] });
+    },
+  });
+
+  const handleDelete = (portfolio: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (confirm(`Sei sicuro di voler eliminare il portfolio "${portfolio.name}"?\n\nQuesta azione eliminerà anche tutte le transazioni e le posizioni associate.`)) {
+      deleteMutation.mutate(portfolio.id);
+    }
+  };
+
+  const handleEdit = (portfolio: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingPortfolio(portfolio);
+  };
 
   if (isLoading) {
     return <div>Caricamento...</div>;
@@ -40,22 +65,32 @@ export function PortfoliosPage() {
         onClose={() => setShowCreateDialog(false)}
       />
 
+      {editingPortfolio && (
+        <EditPortfolioDialog
+          open={!!editingPortfolio}
+          onClose={() => setEditingPortfolio(null)}
+          portfolio={editingPortfolio}
+        />
+      )}
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {portfolios?.map((portfolio: any) => (
-          <Link
-            key={portfolio.id}
-            to={`/portfolios/${portfolio.id}`}
-            className="block rounded-lg border bg-card p-6 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">{portfolio.name}</h3>
+          <div key={portfolio.id} className="relative rounded-lg border bg-card hover:shadow-md transition-shadow">
+            <Link
+              to={`/portfolios/${portfolio.id}`}
+              className="block p-6"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">{portfolio.name}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                    {portfolio.type}
+                  </span>
+                </div>
               </div>
-              <span className="text-xs px-2 py-1 rounded-full bg-muted">
-                {portfolio.type}
-              </span>
-            </div>
 
             <div className="space-y-3">
               <div>
@@ -101,13 +136,31 @@ export function PortfoliosPage() {
                 </div>
               </div>
 
-              <div className="pt-3 border-t">
+              <div className="pt-3 border-t flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  {portfolio.positions?.length || 0} posizioni
+                  {portfolio.positionsCount || 0} posizioni
                 </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => handleEdit(portfolio, e)}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    title="Modifica portfolio"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(portfolio, e)}
+                    disabled={deleteMutation.isPending}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                    title="Elimina portfolio"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
-          </Link>
+            </Link>
+          </div>
         ))}
 
         {!portfolios?.length && (

@@ -51,7 +51,11 @@ export interface Position {
 }
 
 export interface PortfolioSummary {
+  id: string;
   portfolioId: string;
+  name: string;
+  type: string;
+  userId: string;
   totalValue: number;
   totalInvested: number;
   totalReturn: number;

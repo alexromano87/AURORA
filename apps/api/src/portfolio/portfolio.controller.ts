@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PortfolioService } from './portfolio.service';
 
@@ -35,6 +35,21 @@ export class PortfolioController {
   ) {
     const userId = body.userId || 'user_default';
     return this.portfolioService.createPortfolio(userId, body.name, body.type);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update portfolio' })
+  async updatePortfolio(
+    @Param('id') id: string,
+    @Body() body: { name?: string; type?: string },
+  ) {
+    return this.portfolioService.updatePortfolio(id, body.name, body.type);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete portfolio' })
+  async deletePortfolio(@Param('id') id: string) {
+    return this.portfolioService.deletePortfolio(id);
   }
 
   @Post(':id/snapshots')

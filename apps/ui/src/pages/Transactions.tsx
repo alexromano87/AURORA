@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { ArrowRightLeft, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { CreateTransactionDialog } from '@/components/CreateTransactionDialog';
+import { EditTransactionDialog } from '@/components/EditTransactionDialog';
 
 export function TransactionsPage() {
   const userId = 'user_default';
+  const queryClient = useQueryClient();
   const [showTransactionDialog, setShowTransactionDialog] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
 
   const { data: portfolios } = useQuery({
     queryKey: ['portfolios', userId],
@@ -23,6 +26,24 @@ export function TransactionsPage() {
         : Promise.resolve([]),
     enabled: !!selectedPortfolioId,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ portfolioId, transactionId }: { portfolioId: string; transactionId: string }) =>
+      api.transactions.delete(portfolioId, transactionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio', selectedPortfolioId] });
+    },
+  });
+
+  const handleDelete = (transaction: any) => {
+    if (confirm(`Sei sicuro di voler eliminare questa transazione?\n\n${transaction.side} ${transaction.quantity} ${transaction.instrument?.ticker || ''} a €${transaction.priceEur.toFixed(2)}`)) {
+      deleteMutation.mutate({
+        portfolioId: selectedPortfolioId!,
+        transactionId: transaction.id,
+      });
+    }
+  };
 
   if (isLoading) {
     return <div>Caricamento...</div>;
@@ -47,11 +68,21 @@ export function TransactionsPage() {
       </div>
 
       {selectedPortfolioId && (
-        <CreateTransactionDialog
-          open={showTransactionDialog}
-          onClose={() => setShowTransactionDialog(false)}
-          portfolioId={selectedPortfolioId}
-        />
+        <>
+          <CreateTransactionDialog
+            open={showTransactionDialog}
+            onClose={() => setShowTransactionDialog(false)}
+            portfolioId={selectedPortfolioId}
+          />
+          {editingTransaction && (
+            <EditTransactionDialog
+              open={!!editingTransaction}
+              onClose={() => setEditingTransaction(null)}
+              portfolioId={selectedPortfolioId}
+              transaction={editingTransaction}
+            />
+          )}
+        </>
       )}
 
       <div className="rounded-lg border bg-card">
@@ -77,13 +108,16 @@ export function TransactionsPage() {
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                   Totale
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
+                  Azioni
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {transactions?.map((tx: any) => (
                 <tr key={tx.id} className="hover:bg-muted/50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {new Date(tx.date).toLocaleDateString('it-IT')}
+                    {new Date(tx.executedAt).toLocaleDateString('it-IT')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -112,17 +146,32 @@ export function TransactionsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right text-sm">
-                    {tx.quantity}
+                    {parseFloat(tx.quantity).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-right text-sm">
-                    €{tx.priceEur.toLocaleString('it-IT', {
-                      minimumFractionDigits: 2,
-                    })}
+                    €{parseFloat(tx.priceEur).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
-                    €{tx.totalEur.toLocaleString('it-IT', {
-                      minimumFractionDigits: 2,
-                    })}
+                    €{parseFloat(tx.totalEur).toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => setEditingTransaction(tx)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                        title="Modifica"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(tx)}
+                        disabled={deleteMutation.isPending}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                        title="Elimina"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
 import type { TransactionInput } from '@aurora/types';
@@ -24,5 +24,24 @@ export class TransactionsController {
     @Body() input: TransactionInput,
   ) {
     return this.transactionsService.createTransaction(portfolioId, input);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update transaction' })
+  async updateTransaction(
+    @Param('portfolioId') portfolioId: string,
+    @Param('id') id: string,
+    @Body() input: TransactionInput,
+  ) {
+    return this.transactionsService.updateTransaction(portfolioId, id, input);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete transaction' })
+  async deleteTransaction(
+    @Param('portfolioId') portfolioId: string,
+    @Param('id') id: string,
+  ) {
+    return this.transactionsService.deleteTransaction(portfolioId, id);
   }
 }

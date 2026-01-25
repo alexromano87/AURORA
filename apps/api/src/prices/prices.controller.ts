@@ -43,6 +43,18 @@ export class PricesController {
     return this.pricesService.getLatestPrice(instrumentId);
   }
 
+  @Get('instrument/:instrumentId/history')
+  @ApiOperation({ summary: 'Get price history for an instrument' })
+  async getPriceHistory(
+    @Param('instrumentId') instrumentId: string,
+    @Query('days') days?: number,
+  ) {
+    return this.pricesService.getPriceHistory(
+      instrumentId,
+      days ? parseInt(days.toString()) : 365,
+    );
+  }
+
   @Post('isin-mapping')
   @ApiOperation({ summary: 'Create or update ISIN to Yahoo ticker mapping' })
   async upsertIsinMapping(

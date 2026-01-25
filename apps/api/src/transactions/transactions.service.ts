@@ -112,4 +112,67 @@ export class TransactionsService {
       take: limit,
     });
   }
+
+  /**
+   * Update transaction
+   */
+  async updateTransaction(
+    portfolioId: string,
+    id: string,
+    input: TransactionInput,
+  ) {
+    const transaction = await prisma.transaction.findFirst({
+      where: { id, portfolioId },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(`Transaction not found: ${id}`);
+    }
+
+    const totalEur = input.quantity * input.priceEur + (input.feeEur || 0);
+
+    const updated = await prisma.transaction.update({
+      where: { id },
+      data: {
+        instrumentId: input.instrumentId,
+        side: input.side,
+        quantity: input.quantity,
+        priceEur: input.priceEur,
+        feeEur: input.feeEur || 0,
+        totalEur,
+        executedAt: input.executedAt || transaction.executedAt,
+        note: input.note,
+      },
+    });
+
+    // Update positions for both old and new instruments
+    await this.updatePosition(portfolioId, transaction.instrumentId);
+    if (transaction.instrumentId !== input.instrumentId) {
+      await this.updatePosition(portfolioId, input.instrumentId);
+    }
+
+    return updated;
+  }
+
+  /**
+   * Delete transaction
+   */
+  async deleteTransaction(portfolioId: string, id: string) {
+    const transaction = await prisma.transaction.findFirst({
+      where: { id, portfolioId },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(`Transaction not found: ${id}`);
+    }
+
+    await prisma.transaction.delete({
+      where: { id },
+    });
+
+    // Update position after deletion
+    await this.updatePosition(portfolioId, transaction.instrumentId);
+
+    return { success: true };
+  }
 }

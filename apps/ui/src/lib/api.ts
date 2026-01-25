@@ -40,6 +40,10 @@ export const api = {
       fetchApi(`/portfolios/${id}/snapshots?limit=${limit || 30}`),
     create: (data: { userId?: string; name: string; type?: string }) =>
       fetchApi('/portfolios', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { name?: string; type?: string }) =>
+      fetchApi(`/portfolios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      fetchApi(`/portfolios/${id}`, { method: 'DELETE' }),
     createSnapshot: (id: string) =>
       fetchApi(`/portfolios/${id}/snapshots`, { method: 'POST' }),
   },
@@ -51,6 +55,15 @@ export const api = {
       fetchApi(`/portfolios/${portfolioId}/transactions`, {
         method: 'POST',
         body: JSON.stringify(data),
+      }),
+    update: (portfolioId: string, id: string, data: any) =>
+      fetchApi(`/portfolios/${portfolioId}/transactions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (portfolioId: string, id: string) =>
+      fetchApi(`/portfolios/${portfolioId}/transactions/${id}`, {
+        method: 'DELETE',
       }),
   },
 
@@ -123,6 +136,17 @@ export const api = {
       }),
     getLatestPrice: (instrumentId: string) =>
       fetchApi<{ priceEur: number; priceOriginal: number | null; currency: string } | null>(`/prices/instrument/${instrumentId}/latest`),
+    getPriceHistory: (instrumentId: string, days?: number) =>
+      fetchApi<Array<{
+        date: string;
+        price: number;
+        priceOriginal: number | null;
+        currency: string;
+        open: number | null;
+        high: number | null;
+        low: number | null;
+        volume: number | null;
+      }>>(`/prices/instrument/${instrumentId}/history${days ? `?days=${days}` : ''}`),
     getJobsStatus: () => fetchApi('/prices/jobs/status'),
   },
 };

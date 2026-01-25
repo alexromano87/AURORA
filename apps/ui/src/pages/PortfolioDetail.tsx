@@ -37,11 +37,11 @@ export function PortfolioDetailPage() {
   }
 
   const chartData = snapshots?.map((s: any) => ({
-    date: new Date(s.date).toLocaleDateString('it-IT', {
+    date: new Date(s.snapshotDate).toLocaleDateString('it-IT', {
       month: 'short',
       day: 'numeric',
     }),
-    value: s.totalValue,
+    value: s.totalValueEur,
   })) || [];
 
   return (
@@ -70,18 +70,14 @@ export function PortfolioDetailPage() {
         <div className="rounded-lg border bg-card p-6">
           <p className="text-sm font-medium text-muted-foreground">Valore Totale</p>
           <p className="mt-2 text-3xl font-bold">
-            €{portfolio.totalValue?.toLocaleString('it-IT', {
-              minimumFractionDigits: 2,
-            })}
+            €{portfolio.totalValue?.toFixed(2)}
           </p>
         </div>
 
         <div className="rounded-lg border bg-card p-6">
           <p className="text-sm font-medium text-muted-foreground">Capitale Investito</p>
           <p className="mt-2 text-3xl font-bold">
-            €{portfolio.totalInvested?.toLocaleString('it-IT', {
-              minimumFractionDigits: 2,
-            })}
+            €{portfolio.totalInvested?.toFixed(2)}
           </p>
         </div>
 
@@ -99,9 +95,7 @@ export function PortfolioDetailPage() {
               portfolio.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'
             }`}
           >
-            €{portfolio.totalReturn?.toLocaleString('it-IT', {
-              minimumFractionDigits: 2,
-            })}
+            €{portfolio.totalReturn?.toFixed(2)}
           </p>
           <p
             className={`text-sm ${
@@ -137,25 +131,32 @@ export function PortfolioDetailPage() {
       <div className="rounded-lg border bg-card p-6">
         <h2 className="text-lg font-semibold mb-4">Posizioni</h2>
         <div className="space-y-3">
-          {portfolio.positions?.map((position: any) => (
+          {portfolio.positions?.map((position: any, index: number) => (
             <div
-              key={position.id}
+              key={position.instrumentId || index}
               className="flex items-center justify-between p-4 rounded-md bg-muted"
             >
               <div className="flex-1">
-                <p className="font-medium">{position.instrument.name}</p>
+                <p className="font-medium">{position.instrumentName}</p>
                 <p className="text-sm text-muted-foreground">
-                  {position.instrument.ticker} • {position.quantity} unità
+                  {position.isin} • {position.quantity} unità
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Prezzo medio: €{position.avgCost?.toFixed(2)} • Prezzo attuale: €{position.currentPrice?.toFixed(2)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="font-medium">
-                  €{position.currentValue?.toLocaleString('it-IT', {
-                    minimumFractionDigits: 2,
-                  })}
+                  €{position.currentValue?.toFixed(2)}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {(position.weight * 100).toFixed(1)}%
+                </p>
+                <p className={`text-xs mt-1 ${
+                  position.totalReturnPct >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {position.totalReturnPct >= 0 ? '+' : ''}
+                  {position.totalReturnPct?.toFixed(2)}%
                 </p>
               </div>
             </div>

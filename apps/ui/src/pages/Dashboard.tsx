@@ -40,7 +40,7 @@ export function DashboardPage() {
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </div>
           <p className="mt-2 text-2xl font-bold">
-            €{totalValue.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+            €{totalValue.toFixed(2)}
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export function DashboardPage() {
             )}
           </div>
           <p className={`mt-2 text-2xl font-bold ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            €{totalReturn.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+            €{totalReturn.toFixed(2)}
           </p>
           <p className={`text-xs ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(2)}%
@@ -90,7 +90,7 @@ export function DashboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-medium">
-                    €{(portfolio.totalValue || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                    €{(portfolio.totalValue || 0).toFixed(2)}
                   </p>
                   <p className={`text-xs ${(portfolio.totalReturnPct || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {(portfolio.totalReturnPct || 0) >= 0 ? '+' : ''}

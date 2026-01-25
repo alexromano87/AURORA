@@ -32,11 +32,7 @@ export function InstrumentDetailPage() {
 
   const { data: priceHistory, isLoading: historyLoading } = useQuery({
     queryKey: ['instrument-history', id],
-    queryFn: async () => {
-      // Qui dovremmo avere un endpoint per recuperare lo storico prezzi
-      // Per ora usiamo un placeholder
-      return [];
-    },
+    queryFn: () => api.prices.getPriceHistory(id!, 365),
     enabled: !!id,
   });
 
@@ -65,15 +61,7 @@ export function InstrumentDetailPage() {
     }
   };
 
-  // Dati di esempio per il grafico (da sostituire con dati reali)
-  const chartData = priceHistory?.length > 0 ? priceHistory : [
-    { date: '2024-01-01', price: 100 },
-    { date: '2024-02-01', price: 105 },
-    { date: '2024-03-01', price: 103 },
-    { date: '2024-04-01', price: 108 },
-    { date: '2024-05-01', price: 112 },
-    { date: '2024-06-01', price: 115 },
-  ];
+  const chartData = priceHistory || [];
 
   return (
     <div className="space-y-6">
