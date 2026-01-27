@@ -18,13 +18,13 @@ interface PriceData {
 @Injectable()
 export class YahooFinanceService {
   private readonly logger = new Logger(YahooFinanceService.name);
-  private readonly yahooFinance: typeof YahooFinanceClass.prototype;
+  private readonly yahooFinance: any;
 
   constructor(
     private readonly googleFinanceService: GoogleFinanceService,
     private readonly currencyConverter: CurrencyConverterService,
   ) {
-    this.yahooFinance = new YahooFinanceClass();
+    this.yahooFinance = new YahooFinanceClass({ suppressNotices: ['yahooSurvey'] });
     this.logger.log('Yahoo Finance client initialized');
   }
 

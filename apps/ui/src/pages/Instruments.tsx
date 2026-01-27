@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
-import { Database, Search, Download, Edit, Trash2 } from 'lucide-react';
+import { Database, Search, Download, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { CreateInstrumentDialog } from '@/components/CreateInstrumentDialog';
 import { EditInstrumentDialog } from '@/components/EditInstrumentDialog';
@@ -19,6 +19,9 @@ export function InstrumentsPage() {
   const [fetchingPricesFor, setFetchingPricesFor] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [isFetchingAllPrices, setIsFetchingAllPrices] = useState(false);
+  const [fetchProgress, setFetchProgress] = useState({ current: 0, total: 0 });
+  const [fetchErrors, setFetchErrors] = useState<string[]>([]);
   const itemsPerPage = 10;
 
   const { data: instruments, isLoading } = useQuery({
@@ -71,6 +74,89 @@ export function InstrumentsPage() {
     setCurrentPage(1);
   };
 
+  const handleFetchAllPrices = async () => {
+    try {
+      console.log('[FetchAllPrices] Starting...');
+
+      if (!instruments || instruments.length === 0) {
+        console.log('[FetchAllPrices] No instruments found');
+        return;
+      }
+
+      // Filtra solo gli strumenti che non sono CASH
+      const instrumentsToFetch = instruments.filter((inst: any) => inst.type !== 'CASH');
+      console.log('[FetchAllPrices] Instruments to fetch:', instrumentsToFetch.length);
+
+      if (instrumentsToFetch.length === 0) {
+        alert('Nessun strumento disponibile per il recupero dei prezzi');
+        return;
+      }
+
+      const confirmed = confirm(
+        `Vuoi recuperare i prezzi per tutti i ${instrumentsToFetch.length} strumenti?\n\nQuesta operazione potrebbe richiedere alcuni minuti.`
+      );
+
+      if (!confirmed) {
+        console.log('[FetchAllPrices] User cancelled');
+        return;
+      }
+
+      console.log('[FetchAllPrices] User confirmed, starting fetch...');
+      setIsFetchingAllPrices(true);
+      setFetchProgress({ current: 0, total: instrumentsToFetch.length });
+      setFetchErrors([]);
+
+      const errors: string[] = [];
+
+      for (let i = 0; i < instrumentsToFetch.length; i++) {
+        const instrument = instrumentsToFetch[i];
+        console.log(`[FetchAllPrices] Processing ${i + 1}/${instrumentsToFetch.length}: ${instrument.ticker}`);
+        setFetchProgress({ current: i + 1, total: instrumentsToFetch.length });
+
+        try {
+          // Prova prima con Yahoo Finance
+          console.log(`[FetchAllPrices] Trying Yahoo for ${instrument.ticker}...`);
+          await api.prices.fetchFromYahoo(instrument.id);
+          console.log(`[FetchAllPrices] Yahoo success for ${instrument.ticker}`);
+        } catch (error: any) {
+          console.log(`[FetchAllPrices] Yahoo failed for ${instrument.ticker}, trying Finnhub...`);
+          // Se Yahoo fallisce, prova con Finnhub
+          try {
+            await api.prices.fetchFromFinnhub(instrument.id);
+            console.log(`[FetchAllPrices] Finnhub success for ${instrument.ticker}`);
+          } catch (finnhubError: any) {
+            console.error(`[FetchAllPrices] Both failed for ${instrument.ticker}:`, finnhubError);
+            errors.push(`${instrument.ticker} (${instrument.name}): Errore nel recupero prezzi`);
+          }
+        }
+
+        // Piccola pausa tra una richiesta e l'altra per non sovraccaricare le API
+        if (i < instrumentsToFetch.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      console.log('[FetchAllPrices] Finished. Errors:', errors.length);
+      setFetchErrors(errors);
+      setIsFetchingAllPrices(false);
+
+      // Invalida la cache dei prezzi per ricaricare i dati aggiornati
+      queryClient.invalidateQueries({ queryKey: ['instruments-prices'] });
+
+      if (errors.length === 0) {
+        alert(`Prezzi recuperati con successo per tutti i ${instrumentsToFetch.length} strumenti!`);
+      } else {
+        alert(
+          `Completato con ${errors.length} errori su ${instrumentsToFetch.length} strumenti.\n\nVerifica i dettagli sopra la tabella.`
+        );
+      }
+    } catch (error: any) {
+      console.error('[FetchAllPrices] Unexpected error:', error);
+      setIsFetchingAllPrices(false);
+      alert(`Errore imprevisto: ${error.message || 'Errore sconosciuto'}`);
+    }
+  };
+
   if (isLoading) {
     return <div>Caricamento...</div>;
   }
@@ -113,12 +199,64 @@ export function InstrumentsPage() {
           />
         </div>
         <button
+          onClick={handleFetchAllPrices}
+          disabled={isFetchingAllPrices}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetchingAllPrices ? 'animate-spin' : ''}`} />
+          {isFetchingAllPrices ? 'Recupero...' : 'Aggiorna Tutti i Prezzi'}
+        </button>
+        <button
           onClick={() => setShowCreateDialog(true)}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 whitespace-nowrap"
         >
           Nuovo Strumento
         </button>
       </div>
+
+      {/* Progress indicator */}
+      {isFetchingAllPrices && (
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">
+              Recupero prezzi in corso...
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {fetchProgress.current} / {fetchProgress.total}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${(fetchProgress.current / fetchProgress.total) * 100}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Error messages */}
+      {fetchErrors.length > 0 && !isFetchingAllPrices && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <h3 className="text-sm font-semibold text-red-800 mb-2">
+            Errori durante il recupero prezzi ({fetchErrors.length}):
+          </h3>
+          <div className="max-h-40 overflow-y-auto">
+            <ul className="text-sm text-red-700 space-y-1">
+              {fetchErrors.map((error, idx) => (
+                <li key={idx}>• {error}</li>
+              ))}
+            </ul>
+          </div>
+          <button
+            onClick={() => setFetchErrors([])}
+            className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+          >
+            Chiudi
+          </button>
+        </div>
+      )}
 
       <CreateInstrumentDialog
         open={showCreateDialog}

@@ -2,6 +2,7 @@ import redis
 import json
 import time
 from datetime import datetime
+from sqlalchemy import text
 from config import settings
 from database import SessionLocal
 from scoring_engine import run_scoring
@@ -28,8 +29,9 @@ def start_worker():
             if job_key:
                 print(f"📦 Processing job: {job_key}")
 
-                # Get job data
-                job_data = r.hgetall(job_key)
+                # Get job data - BullMQ stores jobs as hash with the full key
+                job_full_key = f"bull:aurora-jobs:{job_key}"
+                job_data = r.hgetall(job_full_key)
                 data = json.loads(job_data.get("data", "{}"))
 
                 run_id = data.get("runId")
@@ -42,7 +44,7 @@ def start_worker():
                 db = SessionLocal()
                 try:
                     db.execute(
-                        "UPDATE \"EngineRun\" SET status = 'RUNNING', \"startedAt\" = :now WHERE id = :run_id",
+                        text("UPDATE engine_run SET type = 'running', \"startedAt\" = :now WHERE \"runId\" = :run_id"),
                         {"now": datetime.utcnow(), "run_id": run_id}
                     )
                     db.commit()
@@ -58,7 +60,7 @@ def start_worker():
 
                     # Update run status to COMPLETED
                     db.execute(
-                        "UPDATE \"EngineRun\" SET status = 'COMPLETED', \"completedAt\" = :now WHERE id = :run_id",
+                        text("UPDATE engine_run SET type = 'completed', \"completedAt\" = :now WHERE \"runId\" = :run_id"),
                         {"now": datetime.utcnow(), "run_id": run_id}
                     )
                     db.commit()
@@ -71,7 +73,7 @@ def start_worker():
 
                     # Update run status to FAILED
                     db.execute(
-                        "UPDATE \"EngineRun\" SET status = 'FAILED', error = :error, \"completedAt\" = :now WHERE id = :run_id",
+                        text("UPDATE engine_run SET type = 'failed', error = :error, \"completedAt\" = :now WHERE \"runId\" = :run_id"),
                         {"error": error_msg, "now": datetime.utcnow(), "run_id": run_id}
                     )
                     db.commit()

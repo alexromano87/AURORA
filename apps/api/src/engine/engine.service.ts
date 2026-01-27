@@ -11,24 +11,36 @@ export class EngineService {
     @InjectQueue('aurora-jobs') private readonly jobQueue: Queue,
   ) {}
 
-  async enqueueRun(userId: string, type: 'scoring' | 'pac' | 'full') {
+  async enqueueRun(userId: string, runType: 'scoring' | 'pac' | 'full') {
+    const runId = `run_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+    // Map frontend type to database status
+    const statusMap: Record<string, string> = {
+      'scoring': 'ETF_SCORING',
+      'pac': 'MONTHLY_PAC',
+      'full': 'FULL_ANALYSIS'
+    };
+
     const run = await prisma.engineRun.create({
       data: {
+        runId,
         userId,
-        type,
-        status: 'QUEUED',
+        type: 'queued',  // execution state
+        status: statusMap[runType],  // analysis type
+        inputParams: {},
       } as any,
     });
 
     await this.jobQueue.add(
       'engine-run',
       {
-        runId: run.id,
+        runId: run.runId,
+        dbId: run.id,
         userId,
-        type,
+        type: runType,
       },
       {
-        jobId: run.id,
+        jobId: run.runId,
         attempts: 3,
         backoff: {
           type: 'exponential',

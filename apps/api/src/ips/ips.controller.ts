@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { IpsService } from './ips.service';
 import type { IpsConfig } from '@aurora/types';
@@ -62,5 +62,24 @@ export class IpsController {
     @Query('userId') userId: string = 'user_default',
   ) {
     return this.ipsService.activateVersion(userId, versionId);
+  }
+
+  @Put('versions/:versionId')
+  @ApiOperation({ summary: 'Update IPS version' })
+  @ApiResponse({ status: 200, description: 'Version updated successfully' })
+  @ApiResponse({ status: 404, description: 'Version not found' })
+  async updateVersion(
+    @Param('versionId') versionId: string,
+    @Body() body: { config: IpsConfig },
+  ) {
+    return this.ipsService.updateVersion(versionId, body.config);
+  }
+
+  @Delete('versions/:versionId')
+  @ApiOperation({ summary: 'Delete IPS version' })
+  @ApiResponse({ status: 200, description: 'Version deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete active version' })
+  async deleteVersion(@Param('versionId') versionId: string) {
+    return this.ipsService.deleteVersion(versionId);
   }
 }

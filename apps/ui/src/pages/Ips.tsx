@@ -1,25 +1,120 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { FileText, CheckCircle, Clock } from 'lucide-react';
+import { FileText, CheckCircle, Clock, Plus, PlayCircle, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { CreateIpsDialog } from '@/components/CreateIpsDialog';
+import { CreateIpsVersionDialog } from '@/components/CreateIpsVersionDialog';
+import { EditIpsVersionDialog } from '@/components/EditIpsVersionDialog';
 
 export function IpsPage() {
   const userId = 'user_default';
+  const queryClient = useQueryClient();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showVersionDialog, setShowVersionDialog] = useState(false);
+  const [editingVersion, setEditingVersion] = useState<any>(null);
 
-  const { data: policy } = useQuery({
+  const { data: policy, isLoading, error } = useQuery({
     queryKey: ['ips', userId],
     queryFn: () => api.ips.getPolicy(userId),
   });
 
+  const activateMutation = useMutation({
+    mutationFn: (versionId: string) => api.ips.activateVersion(versionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ips'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (versionId: string) => api.ips.deleteVersion(versionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ips'] });
+    },
+  });
+
+  const handleActivate = (versionId: string) => {
+    if (confirm('Sei sicuro di voler attivare questa versione? La versione corrente verrà disattivata.')) {
+      activateMutation.mutate(versionId);
+    }
+  };
+
+  const handleDelete = (version: any) => {
+    if (confirm(`Sei sicuro di voler eliminare la versione ${version.version}?\n\nQuesta azione non può essere annullata.`)) {
+      deleteMutation.mutate(version.id);
+    }
+  };
+
   const activeVersion = policy?.versions?.find((v: any) => v.isActive);
+
+  if (isLoading) {
+    return <div>Caricamento...</div>;
+  }
+
+  // If no policy exists, show create button
+  if (error || !policy) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">Investment Policy Statement (IPS)</h1>
+          <p className="text-muted-foreground">
+            Gestisci la tua politica di investimento e versioni
+          </p>
+        </div>
+
+        <div className="rounded-lg border bg-card p-12 text-center">
+          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium mb-2">Nessuna Policy IPS Configurata</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Crea la tua prima Investment Policy Statement per definire gli obiettivi e i vincoli del tuo portafoglio
+          </p>
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            Crea Policy IPS
+          </button>
+        </div>
+
+        <CreateIpsDialog
+          open={showCreateDialog}
+          onClose={() => setShowCreateDialog(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Investment Policy Statement (IPS)</h1>
-        <p className="text-muted-foreground">
-          Gestisci la tua politica di investimento e versioni
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Investment Policy Statement (IPS)</h1>
+          <p className="text-muted-foreground">
+            Gestisci la tua politica di investimento e versioni
+          </p>
+        </div>
+        <button
+          onClick={() => setShowVersionDialog(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+        >
+          <Plus className="h-4 w-4" />
+          Nuova Versione
+        </button>
       </div>
+
+      <CreateIpsVersionDialog
+        open={showVersionDialog}
+        onClose={() => setShowVersionDialog(false)}
+        currentVersion={activeVersion}
+      />
+
+      {editingVersion && (
+        <EditIpsVersionDialog
+          open={!!editingVersion}
+          onClose={() => setEditingVersion(null)}
+          version={editingVersion}
+        />
+      )}
 
       {activeVersion && (
         <div className="rounded-lg border bg-card p-6">
@@ -42,7 +137,7 @@ export function IpsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">Orizzonte Temporale</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium capitalize">
                     {activeVersion.config?.timeHorizon || 'N/A'}
                   </span>
                 </div>
@@ -54,7 +149,7 @@ export function IpsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Obiettivo Principale</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium capitalize">
                     {activeVersion.config?.goal || 'N/A'}
                   </span>
                 </div>
@@ -68,13 +163,13 @@ export function IpsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">Profilo</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium capitalize">
                     {activeVersion.config?.riskProfile || 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Tolleranza Volatilità</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium capitalize">
                     {activeVersion.config?.volatilityTolerance || 'N/A'}
                   </span>
                 </div>
@@ -127,7 +222,7 @@ export function IpsPage() {
                 <div className="flex justify-between">
                   <span className="text-sm">Contributi Mensili</span>
                   <span className="text-sm font-medium">
-                    €{activeVersion.config?.monthlyContribution?.toLocaleString('it-IT') || 0}
+                    €{(activeVersion.config?.monthlyContribution || 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -172,9 +267,39 @@ export function IpsPage() {
                   </p>
                 </div>
               </div>
-              {version.isActive && (
-                <span className="text-xs font-medium text-primary">ATTIVA</span>
-              )}
+
+              <div className="flex items-center gap-2">
+                {version.isActive ? (
+                  <span className="text-xs font-medium text-primary">ATTIVA</span>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setEditingVersion(version)}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      title="Modifica versione"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(version)}
+                      disabled={deleteMutation.isPending}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                      title="Elimina versione"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleActivate(version.id)}
+                      disabled={activateMutation.isPending}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      title="Attiva questa versione"
+                    >
+                      <PlayCircle className="h-3 w-3" />
+                      Attiva
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
           {!policy?.versions?.length && (

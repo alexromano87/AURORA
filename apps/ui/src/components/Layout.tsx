@@ -7,7 +7,6 @@ import {
   Bell,
   TrendingUp,
   Database,
-  DollarSign,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -25,7 +24,6 @@ export function Layout({ children }: LayoutProps) {
     { path: '/alerts', label: 'Alerts', icon: Bell },
     { path: '/engine', label: 'Engine', icon: TrendingUp },
     { path: '/instruments', label: 'Instruments', icon: Database },
-    { path: '/prices', label: 'Prices', icon: DollarSign },
   ];
 
   return (

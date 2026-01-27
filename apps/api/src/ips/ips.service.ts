@@ -172,4 +172,49 @@ export class IpsService {
 
     return policy.versions;
   }
+
+  /**
+   * Update version
+   */
+  async updateVersion(versionId: string, config: IpsConfig) {
+    const version = await prisma.ipsPolicyVersion.findUnique({
+      where: { id: versionId },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`Version not found: ${versionId}`);
+    }
+
+    const updated = await prisma.ipsPolicyVersion.update({
+      where: { id: versionId },
+      data: {
+        config: config as any,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Delete version
+   */
+  async deleteVersion(versionId: string) {
+    const version = await prisma.ipsPolicyVersion.findUnique({
+      where: { id: versionId },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`Version not found: ${versionId}`);
+    }
+
+    if (version.isActive) {
+      throw new BadRequestException('Cannot delete active version');
+    }
+
+    await prisma.ipsPolicyVersion.delete({
+      where: { id: versionId },
+    });
+
+    return { success: true };
+  }
 }

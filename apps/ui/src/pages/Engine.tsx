@@ -1,17 +1,41 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Play, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { Play, Clock, CheckCircle, XCircle, Loader2, RefreshCw, Filter, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { RunEngineDialog } from '@/components/RunEngineDialog';
+import { EngineRunDetailDialog } from '@/components/EngineRunDetailDialog';
+
+type RunStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | null;
+type RunType = 'scoring' | 'pac' | 'full' | null;
 
 export function EnginePage() {
   const userId = 'user_default';
   const [showRunDialog, setShowRunDialog] = useState(false);
+  const [selectedRun, setSelectedRun] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<RunStatus>(null);
+  const [typeFilter, setTypeFilter] = useState<RunType>(null);
 
-  const { data: runs, isLoading } = useQuery({
+  const { data: runs, isLoading, refetch } = useQuery({
     queryKey: ['engine-runs', userId],
     queryFn: () => api.engine.listRuns(userId, 50),
+    refetchInterval: (query) => {
+      // Auto-refresh ogni 5 secondi se ci sono run in esecuzione o in coda
+      const data = query.state.data as any[];
+      const hasActiveRuns = data?.some((r: any) =>
+        r.status === 'RUNNING' || r.status === 'QUEUED'
+      );
+      return hasActiveRuns ? 5000 : false;
+    },
   });
+
+  // Filtra runs
+  const filteredRuns = runs?.filter((run: any) => {
+    if (statusFilter && run.status !== statusFilter) return false;
+    if (typeFilter && run.type !== typeFilter) return false;
+    return true;
+  });
+
+  const hasActiveFilters = statusFilter !== null || typeFilter !== null;
 
   if (isLoading) {
     return <div>Caricamento...</div>;
@@ -56,19 +80,83 @@ export function EnginePage() {
             Gestisci le elaborazioni di scoring e PAC
           </p>
         </div>
-        <button
-          onClick={() => setShowRunDialog(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary/90"
-        >
-          <Play className="h-4 w-4" />
-          Nuova Analisi
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 border rounded-md font-medium hover:bg-gray-50"
+            title="Aggiorna"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Aggiorna
+          </button>
+          <button
+            onClick={() => setShowRunDialog(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary/90"
+          >
+            <Play className="h-4 w-4" />
+            Nuova Analisi
+          </button>
+        </div>
       </div>
 
       <RunEngineDialog
         open={showRunDialog}
         onClose={() => setShowRunDialog(false)}
       />
+
+      <EngineRunDetailDialog
+        open={!!selectedRun}
+        onClose={() => setSelectedRun(null)}
+        run={selectedRun}
+      />
+
+      {/* Filtri */}
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Filtri:</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={statusFilter || ''}
+              onChange={(e) => setStatusFilter(e.target.value || null)}
+              className="text-sm border rounded-md px-3 py-1.5"
+            >
+              <option value="">Tutti gli stati</option>
+              <option value="QUEUED">In coda</option>
+              <option value="RUNNING">In esecuzione</option>
+              <option value="COMPLETED">Completati</option>
+              <option value="FAILED">Falliti</option>
+            </select>
+
+            <select
+              value={typeFilter || ''}
+              onChange={(e) => setTypeFilter(e.target.value || null)}
+              className="text-sm border rounded-md px-3 py-1.5"
+            >
+              <option value="">Tutti i tipi</option>
+              <option value="scoring">ETF Scoring</option>
+              <option value="pac">PAC Proposal</option>
+              <option value="full">Analisi Completa</option>
+            </select>
+
+            {hasActiveFilters && (
+              <button
+                onClick={() => {
+                  setStatusFilter(null);
+                  setTypeFilter(null);
+                }}
+                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 px-2 py-1"
+              >
+                <X className="h-3 w-3" />
+                Rimuovi filtri
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         {['QUEUED', 'RUNNING', 'COMPLETED', 'FAILED'].map((status) => {
@@ -87,11 +175,21 @@ export function EnginePage() {
 
       <div className="rounded-lg border bg-card">
         <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold">Storico Elaborazioni</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Storico Elaborazioni</h2>
+            <span className="text-sm text-muted-foreground">
+              {filteredRuns?.length || 0} {hasActiveFilters ? 'risultat' : 'elaborazion'}
+              {(filteredRuns?.length || 0) === 1 ? (hasActiveFilters ? 'o' : 'e') : (hasActiveFilters ? 'i' : 'i')}
+            </span>
+          </div>
         </div>
         <div className="divide-y">
-          {runs?.map((run: any) => (
-            <div key={run.id} className="p-6 hover:bg-muted/50">
+          {filteredRuns?.map((run: any) => (
+            <div
+              key={run.id}
+              onClick={() => setSelectedRun(run)}
+              className="p-6 hover:bg-muted/50 cursor-pointer transition-colors"
+            >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   {getStatusIcon(run.status)}
@@ -100,7 +198,7 @@ export function EnginePage() {
                       <h3 className="font-semibold">
                         {run.type === 'scoring' && 'ETF Scoring'}
                         {run.type === 'pac' && 'PAC Proposal'}
-                        {run.type === 'full' && 'Full Analysis'}
+                        {run.type === 'full' && 'Analisi Completa'}
                       </h3>
                       <span
                         className={`text-xs px-2 py-1 rounded border ${getStatusColor(
@@ -119,7 +217,10 @@ export function EnginePage() {
                       </p>
                     )}
                     {run.error && (
-                      <p className="text-sm text-red-500 mt-2">{run.error}</p>
+                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                        <p className="text-xs font-medium text-red-800">Errore:</p>
+                        <p className="text-xs text-red-700 mt-1">{run.error}</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -129,12 +230,12 @@ export function EnginePage() {
                     <div className="text-sm">
                       {run._count.scoringResults > 0 && (
                         <p className="text-muted-foreground">
-                          {run._count.scoringResults} scoring results
+                          {run._count.scoringResults} scoring result{run._count.scoringResults > 1 ? 's' : ''}
                         </p>
                       )}
                       {run._count.pacProposals > 0 && (
                         <p className="text-muted-foreground">
-                          {run._count.pacProposals} PAC proposals
+                          {run._count.pacProposals} PAC proposal{run._count.pacProposals > 1 ? 's' : ''}
                         </p>
                       )}
                     </div>
@@ -144,6 +245,24 @@ export function EnginePage() {
             </div>
           ))}
         </div>
+
+        {!filteredRuns?.length && runs?.length > 0 && (
+          <div className="text-center py-12">
+            <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              Nessuna elaborazione corrisponde ai filtri
+            </p>
+            <button
+              onClick={() => {
+                setStatusFilter(null);
+                setTypeFilter(null);
+              }}
+              className="mt-4 text-sm text-primary hover:underline"
+            >
+              Rimuovi filtri
+            </button>
+          </div>
+        )}
 
         {!runs?.length && (
           <div className="text-center py-12">

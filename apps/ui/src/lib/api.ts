@@ -31,6 +31,10 @@ export const api = {
       fetchApi('/ips/versions', { method: 'POST', body: JSON.stringify(data) }),
     activateVersion: (versionId: string) =>
       fetchApi(`/ips/activate/${versionId}`, { method: 'POST' }),
+    updateVersion: (versionId: string, data: { config: any }) =>
+      fetchApi(`/ips/versions/${versionId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteVersion: (versionId: string) =>
+      fetchApi(`/ips/versions/${versionId}`, { method: 'DELETE' }),
   },
 
   portfolios: {

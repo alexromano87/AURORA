@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from config import settings
 import json
@@ -12,13 +13,13 @@ def run_pac(db: Session, run_id: str, user_id: str):
 
     # Get user's IPS policy
     ips_result = db.execute(
-        """
+        text("""
         SELECT ipv.config, ipv.id
-        FROM \"IpsPolicy\" ip
-        JOIN \"IpsPolicyVersion\" ipv ON ip.id = ipv."policyId"
+        FROM ips_policy ip
+        JOIN ips_policy_version ipv ON ip.id = ipv."policyId"
         WHERE ip."userId" = :user_id AND ipv."isActive" = true
         LIMIT 1
-        """,
+        """),
         {"user_id": user_id}
     ).fetchone()
 
@@ -36,15 +37,14 @@ def run_pac(db: Session, run_id: str, user_id: str):
 
     # Get top scoring ETFs from latest scoring run
     top_etfs = db.execute(
-        """
-        SELECT sr."instrumentId", i.ticker, i.name, i.type, sr."totalScore",
-               sr."performanceScore", sr."volatilityScore", sr."sharpeScore", sr."drawdownScore"
-        FROM "ScoringResult" sr
-        JOIN "Instrument" i ON sr."instrumentId" = i.id
+        text("""
+        SELECT sr."instrumentId", i.ticker, i.name, i.type, sr.score, sr.breakdown
+        FROM etf_scoring_result sr
+        JOIN instrument i ON sr."instrumentId" = i.id
         WHERE sr."runId" = :run_id
-        ORDER BY sr."totalScore" DESC
+        ORDER BY sr.score DESC
         LIMIT :max_instruments
-        """,
+        """),
         {"run_id": run_id, "max_instruments": settings.pac_max_instruments}
     ).fetchall()
 
@@ -55,14 +55,17 @@ def run_pac(db: Session, run_id: str, user_id: str):
     print(f"  Found {len(top_etfs)} top-scoring ETFs")
 
     # Calculate allocations
-    total_score = sum(etf[4] for etf in top_etfs)  # totalScore is at index 4
+    total_score = sum(etf[4] for etf in top_etfs)  # score is at index 4
     proposals = []
 
     for etf in top_etfs:
-        instrument_id, ticker, name, etf_type, total_score_val, perf, vol, sharpe, dd = etf
+        instrument_id, ticker, name, etf_type, score_val, breakdown_json = etf
+
+        # Parse breakdown JSON
+        breakdown = json.loads(breakdown_json) if isinstance(breakdown_json, str) else breakdown_json
 
         # Allocate proportionally to score
-        allocation_pct = (total_score_val / total_score) * 100
+        allocation_pct = (score_val / total_score) * 100
         allocation_eur = (allocation_pct / 100) * monthly_contribution
 
         # Apply minimum allocation threshold
@@ -75,12 +78,12 @@ def run_pac(db: Session, run_id: str, user_id: str):
             "name": name,
             "allocation_pct": round(allocation_pct, 2),
             "allocation_eur": round(allocation_eur, 2),
-            "score": total_score_val,
+            "score": score_val,
             "metrics": {
-                "performance": perf,
-                "volatility": vol,
-                "sharpe": sharpe,
-                "drawdown": dd
+                "performance": breakdown.get('performance', 0),
+                "volatility": breakdown.get('volatility', 0),
+                "sharpe": breakdown.get('sharpe', 0),
+                "drawdown": breakdown.get('drawdown', 0)
             }
         })
 
@@ -94,36 +97,37 @@ def run_pac(db: Session, run_id: str, user_id: str):
 
     # Save PAC proposal
     pac_id = db.execute(
-        """
-        INSERT INTO \"PacProposal\"
-        (id, "runId", "userId", "proposalDate", "monthlyAmount", "targetAllocation", status)
-        VALUES (gen_random_uuid(), :run_id, :user_id, :proposal_date, :monthly_amount, :target_allocation, 'PENDING')
+        text("""
+        INSERT INTO proposal
+        (id, "runId", "portfolioId", type, "proposalDate", "monthlyAmount", "targetAllocation", status, metadata)
+        VALUES (gen_random_uuid(), :run_id, (SELECT id FROM portfolio WHERE "userId" = :user_id LIMIT 1),
+                'MONTHLY_PAC', :proposal_date, :monthly_amount, CAST(:target_allocation AS jsonb), 'PENDING', CAST('{}' AS jsonb))
         RETURNING id
-        """,
+        """),
         {
             "run_id": run_id,
             "user_id": user_id,
             "proposal_date": datetime.utcnow(),
             "monthly_amount": monthly_contribution,
-            "target_allocation": target_allocation
+            "target_allocation": json.dumps(target_allocation)
         }
     ).scalar()
 
     # Save proposed instruments
     for proposal in proposals:
         db.execute(
-            """
-            INSERT INTO \"PacProposedInstrument\"
+            text("""
+            INSERT INTO proposed_instrument
             (id, "proposalId", "instrumentId", "allocationPct", "allocationEur", score, metadata)
-            VALUES (gen_random_uuid(), :proposal_id, :instrument_id, :allocation_pct, :allocation_eur, :score, :metadata)
-            """,
+            VALUES (gen_random_uuid(), :proposal_id, :instrument_id, :allocation_pct, :allocation_eur, :score, CAST(:metadata AS jsonb))
+            """),
             {
                 "proposal_id": pac_id,
                 "instrument_id": proposal["instrument_id"],
                 "allocation_pct": proposal["allocation_pct"],
                 "allocation_eur": proposal["allocation_eur"],
                 "score": proposal["score"],
-                "metadata": proposal["metrics"]
+                "metadata": json.dumps(proposal["metrics"])
             }
         )
 
