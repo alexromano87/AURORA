@@ -112,9 +112,10 @@ export function CreateInstrumentDialog({ open, onClose }: CreateInstrumentDialog
     }
 
     // Clear ISIN for crypto
+    const normalizedIsin = formData.isin.trim();
     const dataToSubmit = {
       ...formData,
-      isin: formData.type === 'CRYPTO' ? '' : formData.isin,
+      isin: formData.type === 'CRYPTO' || normalizedIsin === '' ? undefined : normalizedIsin,
     };
 
     createMutation.mutate(dataToSubmit);
@@ -157,7 +158,7 @@ export function CreateInstrumentDialog({ open, onClose }: CreateInstrumentDialog
           <select
             value={formData.type}
             onChange={(e) => handleTypeChange(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            className="aurora-select w-full"
             disabled={createMutation.isPending}
           >
             <option value="ETF">ETF</option>

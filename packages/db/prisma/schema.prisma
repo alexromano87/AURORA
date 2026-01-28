@@ -42,8 +42,8 @@ model IpsPolicyVersion {
 // ==================== Instruments ====================
 
 model Instrument {
-  id       String  @id @default(uuid())
-  isin     String // Removed @unique to allow multiple empty ISINs for crypto
+  id       String   @id @default(uuid())
+  isin     String?  @unique // Optional: allow null when ISIN is missing
   name     String
   ticker   String?
   currency String  @default("EUR")
@@ -306,4 +306,173 @@ model EtfScoringResult {
   @@index([runId])
   @@index([bucket, score])
   @@map("etf_scoring_result")
+}
+
+// ==================== Personal Finance Management ====================
+
+model BankAccount {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String                          // "Conto Principale", "Carta Visa"
+  type           String   @default("CHECKING")   // CHECKING, SAVINGS, CREDIT_CARD, CASH
+  currency       String   @default("EUR")        // EUR, USD, GBP, CHF, etc.
+  initialBalance Float    @default(0)
+  currentBalance Float    @default(0)            // Calcolato dalle transazioni
+  isActive       Boolean  @default(true)
+  color          String?                         // Hex color per UI
+  icon           String?                         // Lucide icon name
+  linkedPortfolioId String?                      // Link opzionale a portfolio investimenti
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions    PersonalTransaction[] @relation("AccountTransactions")
+  transfersFrom   PersonalTransaction[] @relation("TransferFrom")
+  transfersTo     PersonalTransaction[] @relation("TransferTo")
+  balanceHistory  AccountBalanceHistory[]
+
+  @@index([userId, isActive])
+  @@map("bank_account")
+}
+
+model AccountBalanceHistory {
+  id        String   @id @default(uuid())
+  accountId String
+  date      DateTime @db.Date
+  balance   Float
+
+  account BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, date])
+  @@index([accountId, date])
+  @@map("account_balance_history")
+}
+
+model ExpenseCategory {
+  id        String   @id @default(uuid())
+  userId    String?                              // null = sistema, non-null = custom utente
+  name      String                               // Chiave univoca (es: "groceries")
+  nameIt    String                               // Nome italiano (es: "Alimentari")
+  icon      String                               // Lucide icon name
+  color     String                               // Hex color
+  parentId  String?                              // Per sottocategorie
+  isSystem  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+
+  parent       ExpenseCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     ExpenseCategory[] @relation("CategoryHierarchy")
+  transactions PersonalTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, isActive])
+  @@map("expense_category")
+}
+
+model PersonalTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  accountId   String
+  type        String                             // INCOME, EXPENSE, TRANSFER
+
+  amount      Float                              // Sempre positivo
+  currency    String   @default("EUR")
+  amountEur   Float                              // Convertito in EUR per aggregazioni
+
+  categoryId  String?
+  merchant    String?                            // "Esselunga", "Amazon"
+  description String?
+  note        String?
+
+  // Per trasferimenti
+  transferToAccountId   String?
+  transferFromAccountId String?
+  linkedTransferId      String?                  // Collega le due parti di un transfer
+
+  // Metadata categorizzazione LLM
+  llmCategorized       Boolean @default(false)
+  llmConfidence        Float?                    // 0.0 - 1.0
+  llmSuggestedCategory String?                   // Suggerimento originale LLM
+
+  // Metadata import
+  importBatchId String?
+  importSource  String?                          // "csv_import", "manual"
+  externalId    String?                          // ID banca per deduplicazione
+
+  transactionDate DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  account      BankAccount      @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Cascade)
+  category     ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  transferTo   BankAccount?     @relation("TransferTo", fields: [transferToAccountId], references: [id])
+  transferFrom BankAccount?     @relation("TransferFrom", fields: [transferFromAccountId], references: [id])
+
+  @@index([userId, transactionDate])
+  @@index([accountId, transactionDate])
+  @@index([categoryId])
+  @@index([importBatchId])
+  @@map("personal_transaction")
+}
+
+model ImportBatch {
+  id        String   @id @default(uuid())
+  userId    String
+  accountId String
+  filename  String
+  source    String                               // "csv", "excel"
+  status    String   @default("pending")         // pending, processing, completed, failed
+
+  totalRows     Int @default(0)
+  processedRows Int @default(0)
+  importedRows  Int @default(0)
+  duplicateRows Int @default(0)
+  errorRows     Int @default(0)
+
+  errors  Json?
+  mapping Json?
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([userId, createdAt])
+  @@map("import_batch")
+}
+
+model LlmAnalysisCache {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String                               // categorization, spending_analysis, purchase_advice
+  inputHash String
+  prompt    String   @db.Text
+  response  Json
+  tokensUsed Int?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@unique([userId, type, inputHash])
+  @@index([expiresAt])
+  @@map("llm_analysis_cache")
+}
+
+model SpendingAlert {
+  id       String   @id @default(uuid())
+  userId   String
+  type     String                                // anomaly, budget_exceeded, unusual_merchant
+  severity String                                // info, warning, critical
+  title    String
+  message  String
+  data     Json?
+
+  acknowledged   Boolean   @default(false)
+  acknowledgedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, acknowledged])
+  @@map("spending_alert")
 }

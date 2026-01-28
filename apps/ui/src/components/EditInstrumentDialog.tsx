@@ -65,7 +65,11 @@ export function EditInstrumentDialog({ open, onClose, instrument }: EditInstrume
       return;
     }
 
-    updateMutation.mutate(formData);
+    const normalizedIsin = formData.isin.trim();
+    updateMutation.mutate({
+      ...formData,
+      isin: formData.type === 'CRYPTO' || normalizedIsin === '' ? undefined : normalizedIsin,
+    });
   };
 
   const isValidISIN = (isin: string): boolean => {
@@ -144,7 +148,7 @@ export function EditInstrumentDialog({ open, onClose, instrument }: EditInstrume
             <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="aurora-select w-full"
               disabled={updateMutation.isPending}
             >
               <option value="ETF">ETF</option>
@@ -162,7 +166,7 @@ export function EditInstrumentDialog({ open, onClose, instrument }: EditInstrume
             <select
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="aurora-select w-full"
               disabled={updateMutation.isPending}
             >
               <option value="EUR">EUR</option>

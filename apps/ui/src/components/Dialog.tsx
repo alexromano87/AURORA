@@ -1,5 +1,6 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useMemo, useRef } from 'react';
 import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface DialogProps {
   open: boolean;
@@ -10,19 +11,35 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onClose, title, children, maxWidth = 'md' }: DialogProps) {
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const portalEl = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const el = document.createElement('div');
+    el.setAttribute('data-aurora-dialog-root', 'true');
+    return el;
+  }, []);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     if (open) {
+      if (portalEl) document.body.appendChild(portalEl);
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
+      if (portalEl && portalEl.parentNode) {
+        portalEl.parentNode.removeChild(portalEl);
+      }
     };
-  }, [open, onClose]);
+  }, [open, portalEl]);
 
   if (!open) return null;
 
@@ -33,22 +50,24 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'md' }: Dial
     xl: 'max-w-xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  if (!portalEl) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 z-[9998] bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Dialog */}
-      <div className={`relative bg-white rounded-lg shadow-xl ${maxWidthClasses[maxWidth]} w-full mx-4 max-h-[90vh] flex flex-col`}>
+      <div className={`aurora-modal glass-panel-strong relative z-[9999] ${maxWidthClasses[maxWidth]} w-full max-h-[90vh] flex flex-col`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/60">
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+            className="rounded-full bg-white/80 p-2 text-foreground/70 hover:bg-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -59,6 +78,7 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'md' }: Dial
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    portalEl,
   );
 }

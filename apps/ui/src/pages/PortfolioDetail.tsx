@@ -45,18 +45,18 @@ export function PortfolioDetailPage() {
   })) || [];
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold">{portfolio.name}</h1>
-          <p className="text-muted-foreground">Dettaglio portfolio e posizioni</p>
+          <p className="section-subtitle">Portfolio intelligence</p>
+          <h1 className="section-title">{portfolio.name}</h1>
         </div>
         <button
           onClick={() => setShowTransactionDialog(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+          className="cta-button inline-flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
-          Nuova Transazione
+          Nuova transazione
         </button>
       </div>
 
@@ -67,23 +67,23 @@ export function PortfolioDetailPage() {
       />
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-6">
-          <p className="text-sm font-medium text-muted-foreground">Valore Totale</p>
-          <p className="mt-2 text-3xl font-bold">
+        <div className="stat-card">
+          <p className="stat-title">Valore totale</p>
+          <p className="mt-3 text-3xl font-semibold">
             €{portfolio.totalValue?.toFixed(2)}
           </p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6">
-          <p className="text-sm font-medium text-muted-foreground">Capitale Investito</p>
-          <p className="mt-2 text-3xl font-bold">
+        <div className="stat-card">
+          <p className="stat-title">Capitale investito</p>
+          <p className="mt-3 text-3xl font-semibold">
             €{portfolio.totalInvested?.toFixed(2)}
           </p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Rendimento</p>
+            <p className="stat-title">Rendimento</p>
             {portfolio.totalReturn >= 0 ? (
               <TrendingUp className="h-4 w-4 text-green-500" />
             ) : (
@@ -91,7 +91,7 @@ export function PortfolioDetailPage() {
             )}
           </div>
           <p
-            className={`mt-2 text-3xl font-bold ${
+            className={`mt-3 text-3xl font-semibold ${
               portfolio.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'
             }`}
           >
@@ -109,9 +109,16 @@ export function PortfolioDetailPage() {
       </div>
 
       {chartData.length > 0 && (
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">Andamento Storico</h2>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="glass-panel p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Andamento storico</h2>
+              <p className="text-sm text-foreground/60">Ultimi 90 giorni</p>
+            </div>
+            <span className="chip">Snapshot</span>
+          </div>
+          <div className="mt-6">
+            <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
@@ -124,24 +131,31 @@ export function PortfolioDetailPage() {
                 strokeWidth={2}
               />
             </LineChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
-      <div className="rounded-lg border bg-card p-6">
-        <h2 className="text-lg font-semibold mb-4">Posizioni</h2>
-        <div className="space-y-3">
+      <div className="glass-panel p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Posizioni</h2>
+            <p className="text-sm text-foreground/60">Composizione attuale</p>
+          </div>
+          <span className="chip">{portfolio.positions?.length || 0} strumenti</span>
+        </div>
+        <div className="mt-6 space-y-3">
           {portfolio.positions?.map((position: any, index: number) => (
             <div
               key={position.instrumentId || index}
-              className="flex items-center justify-between p-4 rounded-md bg-muted"
+              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/60 bg-white/70 p-4"
             >
               <div className="flex-1">
                 <p className="font-medium">{position.instrumentName}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-foreground/60">
                   {position.isin} • {position.quantity} unità
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-foreground/60 mt-1">
                   Prezzo medio: €{position.avgCost?.toFixed(2)} • Prezzo attuale: €{position.currentPrice?.toFixed(2)}
                 </p>
               </div>
@@ -149,7 +163,7 @@ export function PortfolioDetailPage() {
                 <p className="font-medium">
                   €{position.currentValue?.toFixed(2)}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-foreground/60">
                   {(position.weight * 100).toFixed(1)}%
                 </p>
                 <p className={`text-xs mt-1 ${
@@ -162,7 +176,7 @@ export function PortfolioDetailPage() {
             </div>
           ))}
           {!portfolio.positions?.length && (
-            <p className="text-sm text-muted-foreground">Nessuna posizione</p>
+            <p className="text-sm text-foreground/60">Nessuna posizione</p>
           )}
         </div>
       </div>

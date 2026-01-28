@@ -81,7 +81,7 @@ export function CreatePortfolioDialog({ open, onClose }: CreatePortfolioDialogPr
           <select
             value={type}
             onChange={(e) => setType(e.target.value as 'paper' | 'real')}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            className="aurora-select w-full"
             disabled={createMutation.isPending}
           >
             <option value="paper">Paper (Simulazione)</option>

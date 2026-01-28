@@ -44,19 +44,17 @@ export function PortfoliosPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Portfolios</h1>
-          <p className="text-muted-foreground">
-            Gestisci i tuoi portafogli di investimento
-          </p>
+          <p className="section-subtitle">Strategie attive</p>
+          <h1 className="section-title">Portfolios</h1>
         </div>
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90"
+          className="cta-button"
         >
-          Nuovo Portfolio
+          Nuovo portfolio
         </button>
       </div>
 
@@ -75,7 +73,7 @@ export function PortfoliosPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {portfolios?.map((portfolio: any) => (
-          <div key={portfolio.id} className="relative rounded-lg border bg-card hover:shadow-md transition-shadow">
+          <div key={portfolio.id} className="relative rounded-3xl border border-white/70 bg-white/70 shadow-[0_20px_50px_rgba(31,43,77,0.18)] transition-all hover:translate-y-[-2px] hover:shadow-[0_28px_70px_rgba(31,43,77,0.24)]">
             <Link
               to={`/portfolios/${portfolio.id}`}
               className="block p-6"
@@ -86,87 +84,85 @@ export function PortfoliosPage() {
                   <h3 className="font-semibold">{portfolio.name}</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 rounded-full bg-muted">
-                    {portfolio.type}
-                  </span>
+                  <span className="chip">{portfolio.type}</span>
                 </div>
               </div>
 
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Valore Totale</p>
-                <p className="text-2xl font-bold">
-                  €{(portfolio.totalValue || 0).toLocaleString('it-IT', {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between">
+              <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Rendimento</p>
-                  <p
-                    className={`text-lg font-semibold ${
-                      (portfolio.totalReturn || 0) >= 0
-                        ? 'text-green-500'
-                        : 'text-red-500'
-                    }`}
-                  >
-                    €{(portfolio.totalReturn || 0).toLocaleString('it-IT', {
+                  <p className="stat-title">Valore totale</p>
+                  <p className="text-2xl font-semibold">
+                    €{(portfolio.totalValue || 0).toLocaleString('it-IT', {
                       minimumFractionDigits: 2,
                     })}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
-                  {(portfolio.totalReturnPct || 0) >= 0 ? (
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-red-500" />
-                  )}
-                  <span
-                    className={`font-medium ${
-                      (portfolio.totalReturnPct || 0) >= 0
-                        ? 'text-green-500'
-                        : 'text-red-500'
-                    }`}
-                  >
-                    {(portfolio.totalReturnPct || 0) >= 0 ? '+' : ''}
-                    {(portfolio.totalReturnPct || 0).toFixed(2)}%
-                  </span>
-                </div>
-              </div>
 
-              <div className="pt-3 border-t flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {portfolio.positionsCount || 0} posizioni
-                </p>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => handleEdit(portfolio, e)}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                    title="Modifica portfolio"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(portfolio, e)}
-                    disabled={deleteMutation.isPending}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                    title="Elimina portfolio"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="stat-title">Rendimento</p>
+                    <p
+                      className={`text-lg font-semibold ${
+                        (portfolio.totalReturn || 0) >= 0
+                          ? 'text-emerald-500'
+                          : 'text-rose-500'
+                      }`}
+                    >
+                      €{(portfolio.totalReturn || 0).toLocaleString('it-IT', {
+                        minimumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {(portfolio.totalReturnPct || 0) >= 0 ? (
+                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-rose-500" />
+                    )}
+                    <span
+                      className={`font-medium ${
+                        (portfolio.totalReturnPct || 0) >= 0
+                          ? 'text-emerald-500'
+                          : 'text-rose-500'
+                      }`}
+                    >
+                      {(portfolio.totalReturnPct || 0) >= 0 ? '+' : ''}
+                      {(portfolio.totalReturnPct || 0).toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-white/60 flex items-center justify-between">
+                  <p className="text-sm text-foreground/60">
+                    {portfolio.positionsCount || 0} posizioni
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => handleEdit(portfolio, e)}
+                      className="rounded-full bg-blue-50 p-2 text-blue-700 hover:bg-blue-100 transition-colors"
+                      title="Modifica portfolio"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(portfolio, e)}
+                      disabled={deleteMutation.isPending}
+                      className="rounded-full bg-rose-50 p-2 text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50"
+                      title="Elimina portfolio"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             </Link>
           </div>
         ))}
 
         {!portfolios?.length && (
           <div className="col-span-full text-center py-12">
-            <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
+            <Briefcase className="h-12 w-12 mx-auto text-foreground/30 mb-4" />
+            <p className="text-foreground/60">
               Nessun portfolio disponibile. Creane uno per iniziare.
             </p>
           </div>

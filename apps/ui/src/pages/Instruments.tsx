@@ -23,6 +23,8 @@ export function InstrumentsPage() {
   const [fetchProgress, setFetchProgress] = useState({ current: 0, total: 0 });
   const [fetchErrors, setFetchErrors] = useState<string[]>([]);
   const itemsPerPage = 10;
+  const [sortKey, setSortKey] = useState<string>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const { data: instruments, isLoading } = useQuery({
     queryKey: ['instruments'],
@@ -57,11 +59,29 @@ export function InstrumentsPage() {
     return matchesSearch && matchesType;
   });
 
+  const sortedInstruments = filteredInstruments
+    ? [...filteredInstruments].sort((a: any, b: any) => {
+        const dir = sortDir === 'asc' ? 1 : -1;
+        const aVal = a?.[sortKey];
+        const bVal = b?.[sortKey];
+
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1 * dir;
+        if (bVal == null) return -1 * dir;
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return (aVal - bVal) * dir;
+        }
+
+        return String(aVal).localeCompare(String(bVal), 'it', { numeric: true }) * dir;
+      })
+    : [];
+
   // Calcola paginazione
-  const totalPages = Math.ceil((filteredInstruments?.length || 0) / itemsPerPage);
+  const totalPages = Math.ceil((sortedInstruments?.length || 0) / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedInstruments = filteredInstruments?.slice(startIndex, endIndex);
+  const paginatedInstruments = sortedInstruments?.slice(startIndex, endIndex);
 
   // Reset alla pagina 1 quando cambia il filtro
   const handleTypeFilterChange = (type: string | null) => {
@@ -73,6 +93,18 @@ export function InstrumentsPage() {
     setSearchQuery(value);
     setCurrentPage(1);
   };
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const sortIndicator = (key: string) =>
+    sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : '';
 
   const handleFetchAllPrices = async () => {
     try {
@@ -179,55 +211,62 @@ export function InstrumentsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Strumenti</h1>
-        <p className="text-muted-foreground">
-          Universo degli strumenti finanziari disponibili
-        </p>
+    <div className="space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <p className="section-subtitle">Universe control</p>
+          <h1 className="section-title">Strumenti</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="chip">ETF focus</span>
+          <span className="chip">200 max</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Cerca per nome, ticker o ISIN..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+      <div className="glass-panel p-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40" />
+            <input
+              type="text"
+              placeholder="Cerca per nome, ticker o ISIN..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full rounded-full border border-white/70 bg-white/80 px-11 py-2.5 text-sm text-foreground/80 placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <button
+            onClick={handleFetchAllPrices}
+            disabled={isFetchingAllPrices}
+            className="cta-button inline-flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetchingAllPrices ? 'animate-spin' : ''}`} />
+            {isFetchingAllPrices ? 'Recupero...' : 'Aggiorna prezzi'}
+          </button>
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-5 py-2.5 text-sm font-semibold text-foreground shadow-[0_12px_30px_rgba(31,43,77,0.15)] hover:shadow-[0_16px_40px_rgba(31,43,77,0.2)]"
+          >
+            <Database className="h-4 w-4" />
+            Nuovo strumento
+          </button>
         </div>
-        <button
-          onClick={handleFetchAllPrices}
-          disabled={isFetchingAllPrices}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`h-4 w-4 ${isFetchingAllPrices ? 'animate-spin' : ''}`} />
-          {isFetchingAllPrices ? 'Recupero...' : 'Aggiorna Tutti i Prezzi'}
-        </button>
-        <button
-          onClick={() => setShowCreateDialog(true)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 whitespace-nowrap"
-        >
-          Nuovo Strumento
-        </button>
       </div>
 
       {/* Progress indicator */}
       {isFetchingAllPrices && (
-        <div className="rounded-lg border bg-card p-4">
+        <div className="glass-panel p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">
               Recupero prezzi in corso...
             </span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-foreground/60">
               {fetchProgress.current} / {fetchProgress.total}
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-white/70 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{
                 width: `${(fetchProgress.current / fetchProgress.total) * 100}%`,
               }}
@@ -238,12 +277,12 @@ export function InstrumentsPage() {
 
       {/* Error messages */}
       {fetchErrors.length > 0 && !isFetchingAllPrices && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <h3 className="text-sm font-semibold text-red-800 mb-2">
+        <div className="glass-panel p-4 border border-rose-200 bg-rose-50/80">
+          <h3 className="text-sm font-semibold text-rose-700 mb-2">
             Errori durante il recupero prezzi ({fetchErrors.length}):
           </h3>
           <div className="max-h-40 overflow-y-auto">
-            <ul className="text-sm text-red-700 space-y-1">
+            <ul className="text-sm text-rose-700 space-y-1">
               {fetchErrors.map((error, idx) => (
                 <li key={idx}>• {error}</li>
               ))}
@@ -251,7 +290,7 @@ export function InstrumentsPage() {
           </div>
           <button
             onClick={() => setFetchErrors([])}
-            className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+            className="mt-2 text-xs text-rose-600 hover:text-rose-800 underline"
           >
             Chiudi
           </button>
@@ -281,33 +320,56 @@ export function InstrumentsPage() {
         instrument={fetchingPricesFor}
       />
 
-      <div className="rounded-lg border bg-card">
+      <div className="glass-panel p-0">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="border-b">
+            <thead className="border-b border-white/60">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground/50 uppercase">
                   Ticker
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Nome
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground/50 uppercase">
+                  <button
+                    onClick={() => handleSort('ticker')}
+                    className="inline-flex items-center gap-2 hover:text-foreground"
+                  >
+                    Ticker <span className="text-[10px]">{sortIndicator('ticker')}</span>
+                  </button>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Tipo
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground/50 uppercase">
+                  <button
+                    onClick={() => handleSort('name')}
+                    className="inline-flex items-center gap-2 hover:text-foreground"
+                  >
+                    Nome <span className="text-[10px]">{sortIndicator('name')}</span>
+                  </button>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  ISIN
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground/50 uppercase">
+                  <button
+                    onClick={() => handleSort('type')}
+                    className="inline-flex items-center gap-2 hover:text-foreground"
+                  >
+                    Tipo <span className="text-[10px]">{sortIndicator('type')}</span>
+                  </button>
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground/50 uppercase">
+                  <button
+                    onClick={() => handleSort('isin')}
+                    className="inline-flex items-center gap-2 hover:text-foreground"
+                  >
+                    ISIN <span className="text-[10px]">{sortIndicator('isin')}</span>
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-foreground/50 uppercase">
                   Ultimo Prezzo
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                <th className="px-6 py-4 text-right text-xs font-semibold text-foreground/50 uppercase">
                   Prezzo Euro
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                <th className="px-6 py-4 text-right text-xs font-semibold text-foreground/50 uppercase">
                   Posizioni
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
+                <th className="px-6 py-4 text-center text-xs font-semibold text-foreground/50 uppercase">
                   Azioni
                 </th>
               </tr>
@@ -320,7 +382,7 @@ export function InstrumentsPage() {
                   <tr
                     key={instrument.id}
                     onClick={() => navigate(`/instruments/${instrument.id}`)}
-                    className="hover:bg-muted/50 cursor-pointer"
+                    className="hover:bg-white/70 cursor-pointer transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-mono font-medium">
@@ -340,7 +402,7 @@ export function InstrumentsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-muted-foreground font-mono">
+                      <span className="text-sm text-foreground/50 font-mono">
                         {instrument.isin || '-'}
                       </span>
                     </td>
@@ -352,7 +414,7 @@ export function InstrumentsPage() {
                             : `${formatPrice(price.priceEur)} ${instrument.currency}`}
                         </span>
                       ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
+                        <span className="text-sm text-foreground/50">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
@@ -377,7 +439,7 @@ export function InstrumentsPage() {
                               e.stopPropagation();
                               setFetchingPricesFor(instrument);
                             }}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                            className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
                             title="Scarica prezzi"
                           >
                             <Download className="h-3 w-3" />
@@ -389,7 +451,7 @@ export function InstrumentsPage() {
                             e.stopPropagation();
                             setEditingInstrument(instrument);
                           }}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
+                          className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-foreground/70 hover:bg-white/70"
                           title="Modifica strumento"
                         >
                           <Edit className="h-3 w-3" />
@@ -400,7 +462,7 @@ export function InstrumentsPage() {
                             e.stopPropagation();
                             setDeletingInstrument(instrument);
                           }}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                          className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
                           title="Elimina strumento"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -417,8 +479,8 @@ export function InstrumentsPage() {
 
         {!paginatedInstruments?.length && (
           <div className="text-center py-12">
-            <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
+            <Database className="h-12 w-12 mx-auto text-foreground/30 mb-4" />
+            <p className="text-foreground/60">
               {searchQuery || typeFilter
                 ? 'Nessun strumento trovato'
                 : 'Nessuno strumento disponibile'}
@@ -433,7 +495,7 @@ export function InstrumentsPage() {
           <button
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-1 border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-full border border-white/70 bg-white/70 px-4 py-1.5 text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Precedente
           </button>
@@ -442,10 +504,10 @@ export function InstrumentsPage() {
             <button
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`px-3 py-1 border rounded-md ${
+              className={`rounded-full border border-white/70 px-4 py-1.5 text-sm ${
                 currentPage === page
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-gray-50'
+                  ? 'bg-foreground text-white'
+                  : 'bg-white/70 hover:bg-white'
               }`}
             >
               {page}
@@ -455,7 +517,7 @@ export function InstrumentsPage() {
           <button
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-full border border-white/70 bg-white/70 px-4 py-1.5 text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Successivo
           </button>
@@ -465,11 +527,11 @@ export function InstrumentsPage() {
       <div className="grid gap-4 md:grid-cols-5">
         <button
           onClick={() => handleTypeFilterChange(null)}
-          className={`rounded-lg border bg-card p-4 text-left hover:bg-muted/50 transition-colors ${
+          className={`rounded-2xl border border-white/70 bg-white/70 p-4 text-left shadow-[0_12px_30px_rgba(31,43,77,0.12)] transition-all hover:bg-white ${
             typeFilter === null ? 'ring-2 ring-primary' : ''
           }`}
         >
-          <p className="text-sm text-muted-foreground">TUTTI</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-foreground/40">Tutti</p>
           <p className="text-2xl font-bold mt-1">{instruments?.length || 0}</p>
         </button>
         {['ETF', 'STOCK', 'BOND', 'CRYPTO'].map((type) => {
@@ -478,11 +540,11 @@ export function InstrumentsPage() {
             <button
               key={type}
               onClick={() => handleTypeFilterChange(type)}
-              className={`rounded-lg border bg-card p-4 text-left hover:bg-muted/50 transition-colors ${
+              className={`rounded-2xl border border-white/70 bg-white/70 p-4 text-left shadow-[0_12px_30px_rgba(31,43,77,0.12)] transition-all hover:bg-white ${
                 typeFilter === type ? 'ring-2 ring-primary' : ''
               }`}
             >
-              <p className="text-sm text-muted-foreground">{type}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-foreground/40">{type}</p>
               <p className="text-2xl font-bold mt-1">{count}</p>
             </button>
           );

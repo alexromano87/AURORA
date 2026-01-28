@@ -9,6 +9,11 @@ import { AlertsPage } from './pages/Alerts';
 import { InstrumentsPage } from './pages/Instruments';
 import { InstrumentDetailPage } from './pages/InstrumentDetail';
 import { EnginePage } from './pages/Engine';
+// Personal Finance
+import { PersonalFinancePage } from './pages/PersonalFinance';
+import { BankAccountsPage } from './pages/BankAccounts';
+import { PersonalTransactionsPage } from './pages/PersonalTransactions';
+import { PurchaseAdvisorPage } from './pages/PurchaseAdvisor';
 
 function App() {
   return (
@@ -23,6 +28,11 @@ function App() {
         <Route path="/instruments" element={<InstrumentsPage />} />
         <Route path="/instruments/:id" element={<InstrumentDetailPage />} />
         <Route path="/engine" element={<EnginePage />} />
+        {/* Personal Finance Routes */}
+        <Route path="/personal-finance" element={<PersonalFinancePage />} />
+        <Route path="/bank-accounts" element={<BankAccountsPage />} />
+        <Route path="/personal-transactions" element={<PersonalTransactionsPage />} />
+        <Route path="/purchase-advisor" element={<PurchaseAdvisorPage />} />
       </Routes>
     </Layout>
   );

@@ -119,7 +119,7 @@ export function CreateIpsDialog({ open, onClose }: CreateIpsDialogProps) {
             <select
               value={formData.timeHorizon}
               onChange={(e) => setFormData({ ...formData, timeHorizon: e.target.value })}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="aurora-select w-full"
               disabled={createMutation.isPending}
               required
             >
@@ -154,7 +154,7 @@ export function CreateIpsDialog({ open, onClose }: CreateIpsDialogProps) {
             <select
               value={formData.goal}
               onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="aurora-select w-full"
               disabled={createMutation.isPending}
               required
             >

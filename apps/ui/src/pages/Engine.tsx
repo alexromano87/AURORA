@@ -72,18 +72,16 @@ export function EnginePage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Engine Analytics</h1>
-          <p className="text-muted-foreground">
-            Gestisci le elaborazioni di scoring e PAC
-          </p>
+          <p className="section-subtitle">Orchestrazione</p>
+          <h1 className="section-title">Engine Analytics</h1>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2 border rounded-md font-medium hover:bg-gray-50"
+            className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-white"
             title="Aggiorna"
           >
             <RefreshCw className="h-4 w-4" />
@@ -91,10 +89,10 @@ export function EnginePage() {
           </button>
           <button
             onClick={() => setShowRunDialog(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary/90"
+            className="cta-button inline-flex items-center gap-2"
           >
             <Play className="h-4 w-4" />
-            Nuova Analisi
+            Nuova analisi
           </button>
         </div>
       </div>
@@ -111,18 +109,18 @@ export function EnginePage() {
       />
 
       {/* Filtri */}
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="glass-panel p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Filtri:</span>
+            <Filter className="h-4 w-4 text-foreground/40" />
+            <span className="text-sm font-medium">Filtri attivi</span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={statusFilter || ''}
               onChange={(e) => setStatusFilter(e.target.value || null)}
-              className="text-sm border rounded-md px-3 py-1.5"
+              className="aurora-select"
             >
               <option value="">Tutti gli stati</option>
               <option value="QUEUED">In coda</option>
@@ -134,7 +132,7 @@ export function EnginePage() {
             <select
               value={typeFilter || ''}
               onChange={(e) => setTypeFilter(e.target.value || null)}
-              className="text-sm border rounded-md px-3 py-1.5"
+              className="aurora-select"
             >
               <option value="">Tutti i tipi</option>
               <option value="scoring">ETF Scoring</option>
@@ -148,7 +146,7 @@ export function EnginePage() {
                   setStatusFilter(null);
                   setTypeFilter(null);
                 }}
-                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 px-2 py-1"
+                className="flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-100"
               >
                 <X className="h-3 w-3" />
                 Rimuovi filtri
@@ -162,10 +160,10 @@ export function EnginePage() {
         {['QUEUED', 'RUNNING', 'COMPLETED', 'FAILED'].map((status) => {
           const count = runs?.filter((r: any) => r.status === status).length || 0;
           return (
-            <div key={status} className="rounded-lg border bg-card p-6">
+            <div key={status} className="stat-card">
               <div className="flex items-center gap-2 mb-2">
                 {getStatusIcon(status)}
-                <p className="text-sm font-medium text-muted-foreground">{status}</p>
+                <p className="text-sm font-medium text-foreground/60">{status}</p>
               </div>
               <p className="text-2xl font-bold">{count}</p>
             </div>
@@ -173,11 +171,11 @@ export function EnginePage() {
         })}
       </div>
 
-      <div className="rounded-lg border bg-card">
-        <div className="p-6 border-b">
+      <div className="glass-panel p-0">
+        <div className="p-6 border-b border-white/60">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Storico Elaborazioni</h2>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-foreground/60">
               {filteredRuns?.length || 0} {hasActiveFilters ? 'risultat' : 'elaborazion'}
               {(filteredRuns?.length || 0) === 1 ? (hasActiveFilters ? 'o' : 'e') : (hasActiveFilters ? 'i' : 'i')}
             </span>
@@ -188,7 +186,7 @@ export function EnginePage() {
             <div
               key={run.id}
               onClick={() => setSelectedRun(run)}
-              className="p-6 hover:bg-muted/50 cursor-pointer transition-colors"
+              className="p-6 hover:bg-white/70 cursor-pointer transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
@@ -208,18 +206,18 @@ export function EnginePage() {
                         {run.status}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-foreground/60 mt-1">
                       Avviato il {new Date(run.createdAt).toLocaleString('it-IT')}
                     </p>
                     {run.completedAt && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground/60">
                         Completato il {new Date(run.completedAt).toLocaleString('it-IT')}
                       </p>
                     )}
                     {run.error && (
-                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                        <p className="text-xs font-medium text-red-800">Errore:</p>
-                        <p className="text-xs text-red-700 mt-1">{run.error}</p>
+                      <div className="mt-2 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                        <p className="text-xs font-medium text-rose-800">Errore:</p>
+                        <p className="text-xs text-rose-700 mt-1">{run.error}</p>
                       </div>
                     )}
                   </div>
@@ -229,12 +227,12 @@ export function EnginePage() {
                   {run._count && (
                     <div className="text-sm">
                       {run._count.scoringResults > 0 && (
-                        <p className="text-muted-foreground">
+                        <p className="text-foreground/60">
                           {run._count.scoringResults} scoring result{run._count.scoringResults > 1 ? 's' : ''}
                         </p>
                       )}
                       {run._count.pacProposals > 0 && (
-                        <p className="text-muted-foreground">
+                        <p className="text-foreground/60">
                           {run._count.pacProposals} PAC proposal{run._count.pacProposals > 1 ? 's' : ''}
                         </p>
                       )}
@@ -248,8 +246,8 @@ export function EnginePage() {
 
         {!filteredRuns?.length && runs?.length > 0 && (
           <div className="text-center py-12">
-            <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
+            <Filter className="h-12 w-12 mx-auto text-foreground/30 mb-4" />
+            <p className="text-foreground/60">
               Nessuna elaborazione corrisponde ai filtri
             </p>
             <button
@@ -266,11 +264,11 @@ export function EnginePage() {
 
         {!runs?.length && (
           <div className="text-center py-12">
-            <Play className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
+            <Play className="h-12 w-12 mx-auto text-foreground/30 mb-4" />
+            <p className="text-foreground/60">
               Nessuna elaborazione disponibile
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-foreground/60 mt-2">
               Avvia una nuova elaborazione per iniziare
             </p>
           </div>

@@ -53,26 +53,24 @@ export function IpsPage() {
   // If no policy exists, show create button
   if (error || !policy) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-10">
         <div>
-          <h1 className="text-3xl font-bold">Investment Policy Statement (IPS)</h1>
-          <p className="text-muted-foreground">
-            Gestisci la tua politica di investimento e versioni
-          </p>
+          <p className="section-subtitle">Investment Policy</p>
+          <h1 className="section-title">IPS</h1>
         </div>
 
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-lg font-medium mb-2">Nessuna Policy IPS Configurata</p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Crea la tua prima Investment Policy Statement per definire gli obiettivi e i vincoli del tuo portafoglio
+        <div className="glass-panel p-12 text-center">
+          <FileText className="h-12 w-12 mx-auto text-foreground/40 mb-4" />
+          <p className="text-lg font-semibold mb-2">Nessuna policy IPS configurata</p>
+          <p className="text-sm text-foreground/60 mb-6">
+            Crea la tua prima Investment Policy Statement per definire obiettivi e vincoli del portafoglio.
           </p>
           <button
             onClick={() => setShowCreateDialog(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+            className="cta-button inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Crea Policy IPS
+            Crea policy IPS
           </button>
         </div>
 
@@ -85,20 +83,18 @@ export function IpsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Investment Policy Statement (IPS)</h1>
-          <p className="text-muted-foreground">
-            Gestisci la tua politica di investimento e versioni
-          </p>
+          <p className="section-subtitle">Governance</p>
+          <h1 className="section-title">Investment Policy Statement</h1>
         </div>
         <button
           onClick={() => setShowVersionDialog(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+          className="cta-button inline-flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
-          Nuova Versione
+          Nuova versione
         </button>
       </div>
 
@@ -117,13 +113,13 @@ export function IpsPage() {
       )}
 
       {activeVersion && (
-        <div className="rounded-lg border bg-card p-6">
+        <div className="glass-panel p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">Versione Attiva</h2>
+              <h2 className="text-xl font-semibold">Versione attiva</h2>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800">
               <CheckCircle className="h-3 w-3" />
               v{activeVersion.version}
             </span>
@@ -131,7 +127,7 @@ export function IpsPage() {
 
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              <h3 className="text-sm font-medium text-foreground/60 mb-3">
                 Obiettivi e Orizzonte
               </h3>
               <div className="space-y-2">
@@ -157,7 +153,7 @@ export function IpsPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              <h3 className="text-sm font-medium text-foreground/60 mb-3">
                 Profilo Rischio
               </h3>
               <div className="space-y-2">
@@ -183,7 +179,7 @@ export function IpsPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              <h3 className="text-sm font-medium text-foreground/60 mb-3">
                 Asset Allocation Target
               </h3>
               <div className="space-y-2">
@@ -209,7 +205,7 @@ export function IpsPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              <h3 className="text-sm font-medium text-foreground/60 mb-3">
                 Vincoli e Preferenze
               </h3>
               <div className="space-y-2">
@@ -236,33 +232,33 @@ export function IpsPage() {
           </div>
 
           {activeVersion.notes && (
-            <div className="mt-6 p-4 bg-muted rounded-md">
+            <div className="mt-6 rounded-2xl border border-white/60 bg-white/70 p-4">
               <p className="text-sm font-medium mb-1">Note</p>
-              <p className="text-sm text-muted-foreground">{activeVersion.notes}</p>
+              <p className="text-sm text-foreground/60">{activeVersion.notes}</p>
             </div>
           )}
         </div>
       )}
 
-      <div className="rounded-lg border bg-card p-6">
-        <h2 className="text-lg font-semibold mb-4">Storico Versioni</h2>
+      <div className="glass-panel p-6">
+        <h2 className="text-lg font-semibold mb-4">Storico versioni</h2>
         <div className="space-y-3">
           {policy?.versions?.map((version: any) => (
             <div
               key={version.id}
-              className={`flex items-center justify-between p-4 rounded-md ${
-                version.isActive ? 'bg-primary/10 border border-primary' : 'bg-muted'
+              className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 ${
+                version.isActive ? 'border-primary/40 bg-primary/10' : 'border-white/60 bg-white/70'
               }`}
             >
               <div className="flex items-center gap-3">
                 {version.isActive ? (
                   <CheckCircle className="h-4 w-4 text-primary" />
                 ) : (
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Clock className="h-4 w-4 text-foreground/40" />
                 )}
                 <div>
                   <p className="font-medium">Versione {version.version}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-foreground/60">
                     Creata il {new Date(version.createdAt).toLocaleDateString('it-IT')}
                   </p>
                 </div>
@@ -275,7 +271,7 @@ export function IpsPage() {
                   <>
                     <button
                       onClick={() => setEditingVersion(version)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      className="rounded-full bg-blue-50 p-2 text-blue-700 hover:bg-blue-100 transition-colors"
                       title="Modifica versione"
                     >
                       <Pencil className="h-4 w-4" />
@@ -283,7 +279,7 @@ export function IpsPage() {
                     <button
                       onClick={() => handleDelete(version)}
                       disabled={deleteMutation.isPending}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                      className="rounded-full bg-rose-50 p-2 text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50"
                       title="Elimina versione"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -291,7 +287,7 @@ export function IpsPage() {
                     <button
                       onClick={() => handleActivate(version.id)}
                       disabled={activateMutation.isPending}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-full bg-foreground px-4 py-2 text-xs text-white hover:bg-foreground/90 disabled:opacity-50"
                       title="Attiva questa versione"
                     >
                       <PlayCircle className="h-3 w-3" />
@@ -303,7 +299,7 @@ export function IpsPage() {
             </div>
           ))}
           {!policy?.versions?.length && (
-            <p className="text-sm text-muted-foreground">Nessuna versione disponibile</p>
+            <p className="text-sm text-foreground/60">Nessuna versione disponibile</p>
           )}
         </div>
       </div>

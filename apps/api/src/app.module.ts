@@ -9,6 +9,13 @@ import { EngineModule } from './engine/engine.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { InstrumentsModule } from './instruments/instruments.module';
 import { PricesModule } from './prices/prices.module';
+// Personal Finance modules
+import { BankAccountsModule } from './bank-accounts/bank-accounts.module';
+import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
+import { PersonalTransactionsModule } from './personal-transactions/personal-transactions.module';
+import { CurrencyModule } from './currency/currency.module';
+import { LlmAdvisorModule } from './llm-advisor/llm-advisor.module';
+import { PersonalFinanceDashboardModule } from './personal-finance-dashboard/personal-finance-dashboard.module';
 
 @Module({
   imports: [
@@ -30,6 +37,13 @@ import { PricesModule } from './prices/prices.module';
     AlertsModule,
     InstrumentsModule,
     PricesModule,
+    // Personal Finance modules
+    BankAccountsModule,
+    ExpenseCategoriesModule,
+    PersonalTransactionsModule,
+    CurrencyModule,
+    LlmAdvisorModule,
+    PersonalFinanceDashboardModule,
   ],
 })
 export class AppModule {}

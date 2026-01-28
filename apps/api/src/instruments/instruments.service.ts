@@ -67,8 +67,9 @@ export class InstrumentsService {
     isin?: string;
     currency?: string;
   }) {
-    // For CRYPTO, ISIN is not applicable, always use empty string
-    const isin = data.type === 'CRYPTO' ? '' : (data.isin || '');
+    // For CRYPTO or empty input, store null to allow multiple missing ISINs
+    const isin =
+      data.type === 'CRYPTO' ? null : (data.isin?.trim() ? data.isin.trim() : null);
 
     return prisma.instrument.create({
       data: {
@@ -121,8 +122,9 @@ export class InstrumentsService {
       currency?: string;
     },
   ) {
-    // For CRYPTO, ISIN is not applicable, always use empty string
-    const isin = data.type === 'CRYPTO' ? '' : (data.isin || '');
+    // For CRYPTO or empty input, store null to allow multiple missing ISINs
+    const isin =
+      data.type === 'CRYPTO' ? null : (data.isin?.trim() ? data.isin.trim() : null);
 
     return prisma.instrument.update({
       where: { id: instrumentId },

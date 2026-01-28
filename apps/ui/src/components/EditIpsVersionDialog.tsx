@@ -118,7 +118,7 @@ export function EditIpsVersionDialog({ open, onClose, version }: EditIpsVersionD
             <select
               value={formData.timeHorizon}
               onChange={(e) => setFormData({ ...formData, timeHorizon: e.target.value })}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="aurora-select w-full"
               disabled={updateMutation.isPending}
               required
             >
@@ -153,7 +153,7 @@ export function EditIpsVersionDialog({ open, onClose, version }: EditIpsVersionD
             <select
               value={formData.goal}
               onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="aurora-select w-full"
               disabled={updateMutation.isPending}
               required
             >

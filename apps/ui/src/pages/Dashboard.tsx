@@ -129,124 +129,154 @@ export function DashboardPage() {
   }, [detailedPortfolios.data]);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Panoramica del tuo patrimonio e investimenti
-        </p>
+    <div className="space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <p className="section-subtitle">Panoramica strategica</p>
+          <h1 className="section-title">Dashboard</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="chip">Aggressive profile</span>
+          <span className="chip">ETF-only</span>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border bg-card p-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Patrimonio Totale</p>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+            <p className="stat-title">Patrimonio totale</p>
+            <Briefcase className="h-4 w-4 text-foreground/40" />
           </div>
-          <p className="mt-2 text-2xl font-bold">
+          <p className="mt-3 text-2xl font-semibold text-foreground">
             €{totalValue.toFixed(2)}
           </p>
+          <p className="mt-2 text-sm text-foreground/60">Portafogli consolidati</p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Rendimento Totale</p>
+            <p className="stat-title">Rendimento totale</p>
             {totalReturn >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
             ) : (
-              <TrendingDown className="h-4 w-4 text-red-500" />
+              <TrendingDown className="h-4 w-4 text-rose-500" />
             )}
           </div>
-          <p className={`mt-2 text-2xl font-bold ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+          <p className={`mt-3 text-2xl font-semibold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
             €{totalReturn.toFixed(2)}
           </p>
-          <p className={`text-xs ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(2)}%
+          <p className={`text-sm ${totalReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {totalReturnPct >= 0 ? '+' : ''}
+            {totalReturnPct.toFixed(2)}%
           </p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Portfolios</p>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+            <p className="stat-title">Portfolios attivi</p>
+            <Briefcase className="h-4 w-4 text-foreground/40" />
           </div>
-          <p className="mt-2 text-2xl font-bold">{portfolios?.length || 0}</p>
+          <p className="mt-3 text-2xl font-semibold">{portfolios?.length || 0}</p>
+          <p className="mt-2 text-sm text-foreground/60">Strategie separate</p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Alerts Attivi</p>
+            <p className="stat-title">Alerts in coda</p>
             <AlertCircle className="h-4 w-4 text-orange-500" />
           </div>
-          <p className="mt-2 text-2xl font-bold">{alerts?.length || 0}</p>
+          <p className="mt-3 text-2xl font-semibold">{alerts?.length || 0}</p>
+          <p className="mt-2 text-sm text-foreground/60">Solo segnali rilevanti</p>
         </div>
       </div>
 
       {historicalData.length > 0 && (
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">Andamento Patrimonio</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={historicalData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip
-                formatter={(value: any) => `€${value.toFixed(2)}`}
-                labelStyle={{ color: '#000' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="glass-panel p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Andamento patrimonio</h2>
+              <p className="text-sm text-foreground/60">Ultimi 90 giorni consolidati</p>
+            </div>
+            <span className="chip">Auto refresh</span>
+          </div>
+          <div className="mt-6">
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={historicalData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value: any) => `€${value.toFixed(2)}`}
+                  labelStyle={{ color: '#000' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {assetDistribution.length > 0 && (
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-4">Distribuzione Asset</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={assetDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {assetDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: any) => `€${value.toFixed(2)}`} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="glass-panel p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">Distribuzione asset</h2>
+                <p className="text-sm text-foreground/60">Top strumenti per valore</p>
+              </div>
+              <span className="chip">Top 8</span>
+            </div>
+            <div className="mt-6">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={assetDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {assetDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: any) => `€${value.toFixed(2)}`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         )}
 
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">Portfolios Recenti</h2>
-          <div className="space-y-3">
+        <div className="glass-panel p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Portfolios recenti</h2>
+              <p className="text-sm text-foreground/60">Ultimi 5 aggiornati</p>
+            </div>
+            <span className="chip">Realtime</span>
+          </div>
+          <div className="mt-6 space-y-3">
             {portfolios?.slice(0, 5).map((portfolio: any) => (
               <div key={portfolio.id} className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{portfolio.name}</p>
-                  <p className="text-xs text-muted-foreground">{portfolio.type}</p>
+                  <p className="text-xs text-foreground/60">{portfolio.type}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-medium">
                     €{(portfolio.totalValue || 0).toFixed(2)}
                   </p>
-                  <p className={`text-xs ${(portfolio.totalReturnPct || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  <p className={`text-xs ${(portfolio.totalReturnPct || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                     {(portfolio.totalReturnPct || 0) >= 0 ? '+' : ''}
                     {(portfolio.totalReturnPct || 0).toFixed(2)}%
                   </p>
@@ -254,31 +284,39 @@ export function DashboardPage() {
               </div>
             ))}
             {!portfolios?.length && (
-              <p className="text-sm text-muted-foreground">Nessun portfolio disponibile</p>
+              <p className="text-sm text-foreground/60">Nessun portfolio disponibile</p>
             )}
           </div>
         </div>
 
         {ipsPolicy?.versions?.find((v: any) => v.isActive) && (
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-4">IPS Attivo</h2>
-            <div className="grid gap-4 md:grid-cols-3">
+          <div className="glass-panel p-6 md:col-span-2">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Orizzonte Temporale</p>
+                <h2 className="text-lg font-semibold">IPS attivo</h2>
+                <p className="text-sm text-foreground/60">Vincoli strategici correnti</p>
+              </div>
+              <span className="chip">
+                v{ipsPolicy.versions.find((v: any) => v.isActive)?.version || '1'}
+              </span>
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="stat-title">Orizzonte temporale</p>
                 <p className="text-lg font-medium capitalize">
                   {ipsPolicy.versions.find((v: any) => v.isActive)?.config?.timeHorizon || 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Profilo Rischio</p>
+                <p className="stat-title">Profilo rischio</p>
                 <p className="text-lg font-medium capitalize">
                   {ipsPolicy.versions.find((v: any) => v.isActive)?.config?.riskProfile || 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Versione</p>
+                <p className="stat-title">Allocazione target</p>
                 <p className="text-lg font-medium">
-                  v{ipsPolicy.versions.find((v: any) => v.isActive)?.version || '1'}
+                  {ipsPolicy.versions.find((v: any) => v.isActive)?.config?.assetAllocation ? 'Multi-asset' : 'Core ETF'}
                 </p>
               </div>
             </div>
@@ -286,24 +324,30 @@ export function DashboardPage() {
         )}
       </div>
 
-      <div className="rounded-lg border bg-card p-6">
-        <h2 className="text-lg font-semibold mb-4">Alerts Recenti</h2>
-        <div className="space-y-3">
+      <div className="glass-panel p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Alerts recenti</h2>
+            <p className="text-sm text-foreground/60">Solo gli ultimi 5 segnali</p>
+          </div>
+          <span className="chip">Focus</span>
+        </div>
+        <div className="mt-6 space-y-3">
           {alerts?.slice(0, 5).map((alert: any) => (
-            <div key={alert.id} className="flex items-start gap-3">
+            <div key={alert.id} className="flex items-start gap-3 rounded-2xl border border-white/60 bg-white/70 p-4">
               <AlertCircle className={`h-4 w-4 mt-0.5 ${
-                alert.severity === 'CRITICAL' ? 'text-red-500' :
+                alert.severity === 'CRITICAL' ? 'text-rose-500' :
                 alert.severity === 'HIGH' ? 'text-orange-500' :
                 alert.severity === 'MEDIUM' ? 'text-yellow-500' : 'text-blue-500'
               }`} />
               <div className="flex-1">
                 <p className="text-sm font-medium">{alert.title}</p>
-                <p className="text-xs text-muted-foreground">{alert.message}</p>
+                <p className="text-xs text-foreground/60">{alert.message}</p>
               </div>
             </div>
           ))}
           {!alerts?.length && (
-            <p className="text-sm text-muted-foreground">Nessun alert attivo</p>
+            <p className="text-sm text-foreground/60">Nessun alert attivo</p>
           )}
         </div>
       </div>

@@ -80,24 +80,22 @@ export function AlertsPage() {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-3xl font-bold">Alerts</h1>
-        <p className="text-muted-foreground">
-          Notifiche e avvisi sul tuo portafoglio
-        </p>
+        <p className="section-subtitle">Signal center</p>
+        <h1 className="section-title">Alerts</h1>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-6">
+        <div className="stat-card">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-orange-500" />
-            <p className="font-medium">Alerts Attivi</p>
+            <p className="font-medium">Alerts attivi</p>
           </div>
           <p className="text-3xl font-bold mt-2">{activeAlerts.length}</p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6">
+        <div className="stat-card">
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5 text-gray-500" />
             <p className="font-medium">Ignorati</p>
@@ -105,7 +103,7 @@ export function AlertsPage() {
           <p className="text-3xl font-bold mt-2">{dismissedAlerts.length}</p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6">
+        <div className="stat-card">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-500" />
             <p className="font-medium">Risolti</p>
@@ -115,8 +113,8 @@ export function AlertsPage() {
       </div>
 
       {activeAlerts.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Alerts Attivi</h2>
+        <div className="glass-panel p-6">
+          <h2 className="text-xl font-semibold mb-4">Alerts attivi</h2>
           <div className="space-y-4">
             {activeAlerts.map(renderAlert)}
           </div>
@@ -124,22 +122,22 @@ export function AlertsPage() {
       )}
 
       {resolvedAlerts.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Recentemente Risolti</h2>
+        <div className="glass-panel p-6">
+          <h2 className="text-xl font-semibold mb-4">Recentemente risolti</h2>
           <div className="space-y-4">
             {resolvedAlerts.slice(0, 5).map((alert: any) => (
               <div
                 key={alert.id}
-                className="rounded-lg border bg-card p-6 opacity-70"
+                className="rounded-2xl border border-white/60 bg-white/70 p-6 opacity-70"
               >
                 <div className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                   <div className="flex-1">
                     <h3 className="font-semibold">{alert.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-foreground/60 mt-1">
                       {alert.message}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-foreground/60 mt-2">
                       Risolto il {new Date(alert.resolvedAt).toLocaleString('it-IT')}
                     </p>
                   </div>
@@ -152,8 +150,8 @@ export function AlertsPage() {
 
       {!alerts?.length && (
         <div className="text-center py-12">
-          <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Nessun alert disponibile</p>
+          <AlertCircle className="h-12 w-12 mx-auto text-foreground/30 mb-4" />
+          <p className="text-foreground/60">Nessun alert disponibile</p>
         </div>
       )}
     </div>
